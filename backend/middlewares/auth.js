@@ -22,7 +22,6 @@ exports.authenticateToken = (req, res, next) => {
             return res.status(401).json({ message: 'Token de autenticação inválido/Invalid authentication token' });
         }
         req.userId = decoded.userId;
-        req.userRole = decoded.role;
         next();
     });
 };

@@ -3,6 +3,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 require('dotenv').config();   // Carrega as variáveis de ambiente do arquivo .env
 app.use(express.json()); // Middleware para parsear JSON de vir primeiro pq ele traduz o corpo da requisiçao
+app.use(express.urlencoded({ extended: true })); // Middleware para parsear dados de formulário
 const routeUser = require('./routes/user'); // Importa as rotas do usuário
 const mongoose = require('mongoose');
 
@@ -13,6 +14,8 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Conectado ao MongoDB'))
     .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
 
+
+app.use('/users', routeUser); // Usa as rotas do usuário com o prefixo /api
 
 app.get('/api/doctor', (req, res) => {
     res.send('API de médicos!');
