@@ -6,9 +6,9 @@ const patientController = require('../controllers/patient');
 const authMiddleware = require('../middlewares/auth');
 
 // Rota para registro  padrão standart MVC
-routes.post('/user/register', userController.register);
+routes.post('/register', userController.register);
 // Rota para login
-routes.post('/user/login',userController.login);
+routes.post('/login',userController.login);
 
 
 app.use(authMiddleware.authenticateToken); // Middleware para proteger as rotas seguintes
