@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import {api} from "../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 
 function Register() {
@@ -12,12 +12,18 @@ function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post("http://localhost:5000/api/users/register", { name, email, password, crm });
+            const response = await api.post('/api/users/register', { name, email, password, crm });
+
+            if(response.data.token){
+                localStorage.setItem('token', response.data.token);
+            }
             alert("Médico registrado com sucesso!!");
             navigate("/login"); // Redireciona para a página de login após o registro bem-sucedido
         } catch (error) {
-            alert("Erro ao registrar médico:", error.response ? error.response.data || "Erro desconhecido" : "Erro desconhecido" );
-        }
+            const mensagem = error.response?.data?.message || "Erro no servidor";
+            console.error("Erro completo:", error.response?.data); // Veja isso no F12!
+            alert("Erro ao registrar médico: " + mensagem);
+           }
     };
 
     return ( 

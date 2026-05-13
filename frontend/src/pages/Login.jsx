@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import axios from "axios";
+import {api} from "../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 
 function Login() {
@@ -11,7 +11,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try { 
-        const response = await axios.post("http:localhost:5000/api/users/login", { email, password });
+        const response = await api.post('/api/users/login', { email, password });
         alert("Sucesso, Bem vindo !!");
     } catch (error) {
         alert("Erro ao logar:", error.response ? error.response.data : error.message);

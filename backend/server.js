@@ -1,14 +1,20 @@
+require('dotenv').config();
 const express = require('express');
-const app = express();
 const cors = require('cors');
-app.use(cors()); // Habilita CORS para permitir requisições de diferentes origens
-require('dotenv').config();   // Carrega as variáveis de ambiente do arquivo .env
+const mongoose = require('mongoose');
+
+const app = express();
+
+app.use(cors({
+    origin: 'http://localhost:5173', // Porta do seu React (Vite)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));// Habilita CORS para permitir requisições de diferentes origens
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
 const PORT = process.env.PORT || 3000;
-app.use(express.json()); // Middleware para parsear JSON de vir primeiro pq ele traduz o corpo da requisiçao
-app.use(express.urlencoded({ extended: true })); // Middleware para parsear dados de formulário
 const routeUser = require('./routes/user'); // Importa as rotas do usuário
 
-const mongoose = require('mongoose');
 
 mongoose.connection.on('error', (err) => console.error('Erro de conexão com o MongoDB:', err)); // Adiciona um listener para erros de conexão com o MongoDB
 

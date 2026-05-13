@@ -1,4 +1,4 @@
-const { get } = require('mongoose');
+const { get } = require('mongoose'); // Importa o método get do Mongoose, embora não seja utilizado neste código. Pode ser removido se não for necessário.
 const { Patient, MedicalRecord, Evolution ,Prescription} = require('../models');
 
 

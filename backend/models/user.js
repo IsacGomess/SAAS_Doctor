@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
     name:{ type: String, required: true },
@@ -12,20 +13,23 @@ const userSchema = new mongoose.Schema({
     
 }, { timestamps: true });
 
-
-const User = mongoose.model('User', userSchema, 'users');
-
-
 // Middleware para hash da senha antes de salvar o usuário
-userSchema.pre('save', function(next) {
+userSchema.pre('save', async function() {
+    // Se a senha não foi modificada, apenas segue em frente
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
-    const salt = bycrypt.genSaltSync(10);
-    this.password = bycrypt.hashSync(this.password, salt);
-    next();
+    try {
+        // Usar a versão assíncrona é mais seguro para não travar o Event Loop do Node
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    
+    } catch (err) {
+        next(err);
+    }
 });
 
+const User = mongoose.model('User', userSchema, 'users');
 
 
 module.exports = User;

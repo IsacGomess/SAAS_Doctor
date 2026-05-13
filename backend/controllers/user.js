@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-require('../models/User');
+const  User   = require('../models/user');
 const bcrypt = require('bcrypt');
 
 // Importando o modelo User
