@@ -1,0 +1,65 @@
+/* App.css */
+.login-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5; /* Fundo cinza suave médico */
+  padding: 20px;
+}
+
+.login-card-container {
+  background: white;
+  width: 100%;
+  max-width: 1000px;
+  min-height: 600px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  display: flex; /* Força o alinhamento lado a lado */
+}
+
+.left-panel {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(0, 51, 102, 0.9)), 
+              url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=1000');
+  background-size: cover;
+  background-position: center;
+  padding: 60px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.right-panel {
+  flex: 1;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: white;
+}
+
+@media (max-width: 992px) {
+  .left-panel { display: none; } /* Esconde o painel azul no celular */
+  .login-card-container { max-width: 500px; }
+}
+
+.custom-input-group {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.custom-input-group input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding-left: 10px;
+  outline: none;
+}

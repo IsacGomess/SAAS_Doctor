@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
 
 exports.authenticateToken = (req, res, next) => {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization; // Espera o token no formato "Bearer
 
     if(!authHeader) {
         return res.status(401).json({ message: 'Token de autenticação não fornecido/Authentication token not provided' });
     }
 
-    const parts = authHeader.split(' ');
+    const parts = authHeader.split(' '); // Divide o header em partes, esperando "Bearer" e o token
     if(parts.length !== 2){
         return res.status(401).json({ message: 'Token de autenticação inválido/Invalid authentication token' });
     }
