@@ -1,10 +1,10 @@
 /* App.css */
+
 .login-page-wrapper {
-  min-height: 100vh;
+  min-height: 50vh;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background-color: #f0f2f5; /* Fundo cinza suave médico */
+  justify-content: center; /* Fundo cinza suave médico */
   padding: 20px;
 }
 
@@ -21,11 +21,10 @@
 
 .left-panel {
   flex: 1;
-  background: linear-gradient(135deg, rgba(13, 110, 253, 0.9), rgba(0, 51, 102, 0.9)), 
-              url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=1000');
+  background: linear-gradient(135deg, rgba(67, 90, 124, 0.9), rgba(48, 83, 117, 0.9)), url('./images/clinic.png');
   background-size: cover;
   background-position: center;
-  padding: 60px;
+  padding: 140px;
   color: white;
   display: flex;
   flex-direction: column;
@@ -38,7 +37,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: white;
+  background: rgb(158, 159, 170);
 }
 
 @media (max-width: 992px) {

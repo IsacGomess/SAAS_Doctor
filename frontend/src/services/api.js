@@ -4,7 +4,7 @@ const api = axios.create({
     baseURL: 'http://localhost:8080'
     
 });
-
+// Add a request interceptor to include the token in the Authorization header for every request if the token exists
 api.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) {
