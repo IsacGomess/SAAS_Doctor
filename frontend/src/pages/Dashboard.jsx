@@ -3,6 +3,7 @@ import api from "../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import {NavBar} from "../pages-components/nav-bar";
 import {SelectorsDashboard} from "../pages-components/selectors-dashboard";
+import {CardsDashboard} from "../pages-components/cards-dashboard";
 
 
 function Dashboard() {
@@ -36,6 +37,7 @@ function Dashboard() {
         <>
          <NavBar userName={username} />
             <SelectorsDashboard/>
+            <CardsDashboard/>   
         </>   
     );
 }    
