@@ -60,7 +60,7 @@ function Login() {
                   {/* Lista de Benefícios */}
                   <div className="benefits mt-5">
                     <div className="benefit-item">
-                      <div className="benefit-icon" style={{fontSize:'40px'}}>🛡️<strong style={{color:"white",fontSize:'20px'}}>Gestão Eficiente</strong></div>
+                      <div className="benefit-icon " style={{fontSize:'40px',color:"white"}}><i class="bi bi-globe-americas-fill pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Gestão Eficiente</strong></div>
                       <div>
                         
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>Controle uma gestão eficiente de planos e faturamento de forma integrada.</p>
@@ -68,7 +68,7 @@ function Login() {
                     </div>
                     
                     <div className="benefit-item">
-                      <div className="benefit-icon" style={{fontSize: '40px'}}>📅<strong style={{color:"white",fontSize:'20px'}}>Agenda Digital</strong></div>
+                      <div className="benefit-icon" style={{fontSize: '40px', color:"white"}}><i class="bi bi-calendar-day pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Agenda Digital</strong></div>
                       <div>
                       
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>Gerencie seus pacientes agendados e os novos fluxos da clínica.</p>
@@ -76,7 +76,7 @@ function Login() {
                     </div>
 
                     <div className="benefit-item">
-                      <div className="benefit-icon" style={{fontSize:'40px'}}>📑<strong style={{color:"white",fontSize:'20px'}}>Prontuários</strong></div>
+                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i class="bi bi-calendar2-plus ms-0 pe-4 "></i><strong style={{color:"white",fontSize:'20px'}}>Prontuários</strong></div>
                       <div>
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>Acesse e atualize os prontuários dos pacientes com rapidez e segurança.</p>
                       </div>
@@ -209,7 +209,7 @@ function Login() {
                       </div>
                     </div>
 
-                    {/* Botão Entrar Ocupando 100% com o Verde Exato da Imagem */}
+                    {/* Botão Entrar Ocupando 100% */}
                     <div style={{ display: 'block', marginBottom: '25px' }}>
                       <button 
                         type="submit" 

@@ -2,6 +2,7 @@ import { useState ,useEffect} from "react";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import {NavBar} from "../pages-components/nav-bar";
+import {SelectorsDashboard} from "../pages-components/selectors-dashboard";
 
 
 function Dashboard() {
@@ -34,7 +35,7 @@ function Dashboard() {
     return (
         <>
          <NavBar userName={username} />
-            
+            <SelectorsDashboard/>
         </>   
     );
 }    

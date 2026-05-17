@@ -1,2 +1,41 @@
+/* Arquivo CSS principal do App */
+/* page-components/selectors-dashboard.css */
+
+.btn-color-defaut {
+    background-color:#FFFFFF !important;
+    color: black!important;
+    padding: 2px 100%;
+    width: 90% !important;
 
 
+}
+.btn-color-defaut:hover {
+    background-color: #1E6B65 !important;
+    color: #FFFFFF !important;
+
+
+}
+
+.position-btn {
+    position: fixed !important;
+    top: 20% !important;
+    right: 80% !important;
+    width: 20% !important;
+    height: 80% !important;
+    bottom: 0% !important ;
+    border-right: solid rgba(0,0,0,0.08) !important;
+}
+
+.icone{
+    position: fixed !important;
+    top: 0% !important;
+    right: 80% !important;
+    width: 20% !important;
+    height: 20% !important;
+    border-right: solid rgba(0,0,0,0.08) !important;
+    font-size: 50px !important;
+    color: #1E6B65 !important  ;
+}
+.med{
+    font-size: 50px !important;
+}
