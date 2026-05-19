@@ -1,44 +1,38 @@
-import { useState ,useEffect} from "react";
-import api from "../services/api";
-import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
-import {NavBar} from "../pages-components/nav-bar";
-import {SelectorsDashboard} from "../pages-components/selectors-dashboard";
-import {CardsDashboard} from "../pages-components/cards-dashboard";
-
+import { useState } from "react";
+import { Outlet } from "react-router-dom"; 
+import { NavBar } from "../pages-components/nav-bar";
+import { SelectorsDashboard } from "../pages-components/selectors-dashboard";
 
 function Dashboard() {
-    const navigate = useNavigate();
-    const [name, setName] = useState("");
-    const [cpf, setCpf] = useState("");
-    const [phone, setPhone] = useState("");
-    const [observations, setObservations] = useState("");
-    const [isPresent, setIsPresent] = useState(false);
-    const [username, setUserName] = useState(localStorage.getItem("userName") || ""); // Obtém o nome do usuário do localStorage    
-    
-
-    const registerPatients = async () => {
-        try {
-            const response = await api.post('/api/users/patients/register-patient',{name, cpf, phone, observations, isPresent});
-            
-            
-            alert("Paciente registrado com sucesso!");
-
-
-        } catch (error) {
-
-
-            alert("Erro ao registrar paciente!");
-        }
-    
-
-    }
+    const [username, setUserName] = useState(localStorage.getItem("userName") || ""); 
 
     return (
-        <>
-         <NavBar userName={username} />
-            <SelectorsDashboard/>
-            <CardsDashboard/>   
-        </>   
+        // vh-100 força o container pai a ocupar exatamente a altura da tela inteira
+        <div className="vh-100 d-flex flex-column pt-5 ps-4 w-100" style={{ backgroundColor: '#F0F4F3', minHeight: '100vh' }}>
+            
+            {/* 1. Barra superior do topo */}
+            <NavBar userName={username} />
+            
+            {/* 2. Área principal (Menu Lateral + Conteúdo da Direita) */}
+            <div className="d-flex flex-grow-1 p-0 m-0" style={{ minHeight: 0 }}>
+                
+                {/* Abaixo, envolvemos o seu menu lateral em uma div flexível que 
+                  garante que ele ocupe seu próprio espaço e empurre o resto para a direita
+                */}
+                <aside className="bg-white border-end h-100 p-0 m-0" style={{ width: "240px", minWidth: "210px" }}>
+                    <SelectorsDashboard />
+                </aside>
+                
+                {/* Área do conteúdo (Onde o Outlet joga os Cards).
+                  O overflowY: 'auto' garante que se a tela for pequena, apareça uma barra de rolagem 
+                  APENAS nos cards, mantendo a navbar e o menu lateral sempre fixos na tela!
+                */}
+                <main className="flex-grow-1 p-4" style={{ backgroundColor: '#F0F4F3', overflowY: 'auto' }}>
+                    <Outlet /> 
+                </main>
+
+            </div>
+        </div>   
     );
 }    
 

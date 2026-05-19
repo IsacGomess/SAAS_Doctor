@@ -1,12 +1,10 @@
-import {useNavigate} from 'react-router-dom'
-
 
 export function CardsDashboard() {
-    const navigate = useNavigate();
+    
     return (
         <>
          {/* Container principal ajustado para a sua estrutura de tela */}
-        <div style={{ marginLeft: '21%', marginTop: '8%', marginRight: '2%' }}>
+        <div className="p-3" style={{  minHeight: '100%' }}>
             
             {/* ROW PRINCIPAL (Divide o espaço total em 12 partes) */}
             <div className="row g-4">
@@ -68,7 +66,7 @@ export function CardsDashboard() {
                                 <table className="table table-hover align-middle m-0">
                                     <thead className="table-light">
                                         <tr>
-                                            <th>Temp</th>
+                                            <th>Hora</th>
                                             <th>Paciente</th>
                                             <th>Tipo</th>
                                             <th>Status</th>
