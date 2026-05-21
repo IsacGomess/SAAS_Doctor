@@ -4,8 +4,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import './App.css';
 import {CardsDashboard } from './pages-components/cards-dashboard';
-
+import { Patients } from './patient-routes/register';
 // Componente para proteger rotas privadas
+
 const PrivateRoute = ({ children }) => {
 
   const token = localStorage.getItem('token');
@@ -22,6 +23,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}>
             <Route index element={<CardsDashboard />} />
+            <Route path="patients" element={<Patients />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

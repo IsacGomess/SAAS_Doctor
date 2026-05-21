@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     crm:{ type: String},
     specialty:[{name:String,surgeon:String}],
     phone:{ type: String },
-    observatiosn:{ type: String },
+    observations:{ type: String },
     isActive: { type: Boolean, default: true }
     
 }, { timestamps: true });
@@ -20,7 +20,7 @@ userSchema.pre('save', async function() {
         return;
     }
     try {
-        // Usar a versão assíncrona é mais seguro para não travar o Event Loop do Node
+       
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
     

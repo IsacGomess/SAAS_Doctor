@@ -1,12 +1,42 @@
-const { get } = require('mongoose'); // Importa o método get do Mongoose, embora não seja utilizado neste código. Pode ser removido se não for necessário.
 const { Patient, MedicalRecord, Evolution ,Prescription} = require('../models');
+const {z} = require('zod');
 
-
-
+const pacienteSchema = z.object({
+    name: z.string()
+        .min(3, "O nome deve ter pelo menos 3 caracteres")
+        .max(100, "O nome não pode passar de 100 caracteres")
+        .transform(val => val.trim().toLowerCase()), // Remove espaços extras e padroniza minúsculo
+    
+    cpf: z.string()
+        .transform(val => val.replace(/[^0-9]/g, '')) // Remove pontos/traços vindo do front
+        .refine(val => val.length === 11, "O CPF deve ter exatamente 11 dígitos"),
+    
+    phone: z.string()
+        .transform(val => val.replace(/[^0-9]/g, '')) // Remove parênteses/traços do telefone
+        .refine(val => val.length >= 10 && val.length <= 11, "Telefone inválido (deve ter 10 ou 11 dígitos)"),
+    
+    observations: z.string()
+        .max(500, "As observações não podem passar de 500 caracteres")
+        .optional()
+        .transform(val => val ? val.trim() : ""), // Se não enviar nada, vira string vazia limpa
+    
+    isPresent: z.boolean().default(true) // Se o front esquecer, assume true por padrão
+});
 
 exports.registerPatient = async (req, res) => {
+
+    const validation = pacienteSchema.safeParse(req.body);
+
+    if (!validation.success) {
+        return res.status(400).json({ 
+            success: false,
+            message: 'Dados inválidos enviados para o cadastro.', 
+            errors: validation.error.flatten().fieldErrors // Retorna exatamente qual campo falhou
+        });
+    }
+    const {name, cpf, phone, observations, isPresent} = validation.data; // Dados já validados e transformados
     try {
-        const { name, cpf, phone, observations, isPresent } = req.body;
+        
         const newPatient = await Patient.create({ name, cpf, phone, observations, isPresent });
 
         return res.status(201).json({ success: true, message: 'Paciente registrado com sucesso/Patient registered successfully', patient: newPatient });

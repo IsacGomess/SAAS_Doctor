@@ -11,7 +11,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));// Habilita CORS para permitir requisições de diferentes origens
 app.use(express.json()); // Habilita o parsing de JSON no corpo das requisições 
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.urlencoded({ extended: true })); // Habilita o parsing de dados URL-encoded no corpo das requisições
 const PORT = process.env.PORT || 3000;
 const routeUser = require('./routes/user'); // Importa as rotas do usuário
 

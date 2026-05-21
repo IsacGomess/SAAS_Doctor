@@ -12,7 +12,7 @@ exports.generalLimiter = rateLimit({
 // Configuração RÍGIDA para Login e Registro
 exports.authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // Janela de 1 hora
-  max: 15, // Apenas 20 tentativas de login por hora por IP
+  max: 20, // Apenas 20 tentativas de login por hora por IP
   message: 'Muitas tentativas de login. Por segurança, tente novamente daqui a uma hora.',
   standardHeaders: true,
   legacyHeaders: false,

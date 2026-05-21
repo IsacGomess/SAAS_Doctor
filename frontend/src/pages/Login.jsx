@@ -11,7 +11,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try { 
-        const response = await api.post('/api/users/login', { email, password });
+        const response = await api.post('/api/users/login', { email, password});
         
         if(response.data.accessToken){
                 localStorage.setItem('token', response.data.accessToken); // Armazena o token de acesso no localStorage
@@ -21,7 +21,7 @@ function Login() {
         navigate("/dashboard"); // Redireciona para a página de dashboard após o login bem-sucedido
     } catch (error) {
       
-        alert("Erro ao logar:");
+        alert("Erro de usuario ou senha ao logar:");
     }  
   };
     return (
