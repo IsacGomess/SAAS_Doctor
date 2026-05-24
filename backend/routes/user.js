@@ -1,20 +1,22 @@
 const express = require('express');
-const app = express();
 const routes = require('express').Router();
 const userController = require('../controllers/user');
 const patientController = require('../controllers/patient');
 const authMiddleware = require('../middlewares/auth');
 const limiter  = require('../middlewares/rate-limit'); // Importa o middleware de rate limiting
 
-// Rota para registro  padrão standart MVC
+// Rotas públicas (sem autenticação)
 routes.post('/register',limiter.authLimiter,  userController.register);
-// Rota para login
 routes.post('/login',limiter.authLimiter, userController.login);
 
+// Middleware de autenticação para as rotas seguintes
+routes.use(authMiddleware.authenticateToken);
+routes.use(limiter.generalLimiter);
 
-app.use(authMiddleware.authenticateToken); // Middleware para proteger as rotas seguintes com autenticação JWT
-
-app.use(limiter.generalLimiter); // Aplica o rate limiter geral para as rotas autenticadas
+// Rotas protegidas (requerem autenticação)
+routes.post('/membros', userController.addMembro);
+routes.get('/membros', userController.getMembros);
+routes.delete('/membros/:membroId', userController.deleteMembro);
 
 routes.get('/patients/atendance-list',  patientController.getPatients);
 

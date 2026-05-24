@@ -273,10 +273,10 @@ function Register() {
                 </div>
               </div>
 
-              {/* Campo CRM */}
+              {/* Campo Conselho */}
               <div className="col-md-6" style={{ textAlign: 'left' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#495057', marginBottom: '8px' }}>
-                  CRM
+                  Registro do Conselho
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <span style={{ position: 'absolute', left: '16px', fontSize: '18px', zIndex: '5', pointerEvents: 'none' }}>
@@ -284,7 +284,7 @@ function Register() {
                   </span>
                   <input 
                     type="text" 
-                    placeholder="000000-UF" 
+                    placeholder="00000" 
                     value={crm} 
                     onChange={(e) => setCrm(e.target.value)} 
                     required 

@@ -16,6 +16,11 @@ function Login() {
         if(response.data.accessToken){
                 localStorage.setItem('token', response.data.accessToken); // Armazena o token de acesso no localStorage
                 localStorage.setItem('userName', response.data.user.name); // Armazena o nome do usuário no localStorage
+                if (response.data.user.clinicaId) {
+                    localStorage.setItem('clinicaId', response.data.user.clinicaId);
+                } else {
+                    localStorage.removeItem('clinicaId');
+                }
             }
         alert("Sucesso, Bem vindo !!");
         navigate("/dashboard"); // Redireciona para a página de dashboard após o login bem-sucedido

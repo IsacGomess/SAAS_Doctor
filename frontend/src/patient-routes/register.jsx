@@ -11,7 +11,7 @@ export const Patients = () => {
     const [phone, setPhone] = useState("");
     const [observations, setObservations] = useState("");
     const [isPresent, setIsPresent] = useState(true);   
-
+    {/*. busca global da clinica por pacientes */}
     useEffect(() => {
         const searchPatients = async () => {
             try {
@@ -69,7 +69,7 @@ export const Patients = () => {
     }
 
     return (
-        <div className="container-fluid pt-5 ps-4 pe-3 w-100" style={{ minHeight: '100%' }}>
+        <div className="container-fluid pt-5 ps-0 pe-1 w-100" style={{ minHeight: '100%' }}>
             
             {/* Cabeçalho da Página */}
             <div className="d-flex justify-content-between align-items-center mb-4">

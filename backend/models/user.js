@@ -9,7 +9,9 @@ const userSchema = new mongoose.Schema({
     specialty:[{name:String,surgeon:String}],
     phone:{ type: String },
     observations:{ type: String },
-    isActive: { type: Boolean, default: true }
+    role: { type: String, enum: ['administrador', 'medico', 'enfermeiro', 'recepcionista', 'fisioterapeuta', 'nutricionista', 'esteticista', 'dentista', 'nutrologo'], default: 'recepcionista' },
+    isActive: { type: Boolean, default: true },
+    clinicaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinica', default: null }
     
 }, { timestamps: true });
 

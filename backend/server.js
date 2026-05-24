@@ -2,8 +2,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors'); // Importa o middleware CORS para lidar com requisições de diferentes origens
 const mongoose = require('mongoose');
+const waitingLineRoutes = require('./routes/waiting-line');
+const clinicaRoutes = require('./routes/clinicas');
 
 const app = express();
+
+// Simple request logger to aid debugging
+app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.originalUrl} - Headers:`, {
+        origin: req.headers.origin,
+        authorization: req.headers.authorization ? 'present' : 'missing',
+        'content-type': req.headers['content-type']
+    });
+    next();
+});
 
 app.use(cors({
     origin: 'http://localhost:5173', // Porta do seu React (Vite)
@@ -25,6 +37,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 app.use('/api/users', routeUser); // Usa as rotas do usuário
+app.use('/api/clinicas', clinicaRoutes); // Rotas de clínica protegidas
+app.use('/api/waiting-line', waitingLineRoutes); // rotas de fila  de pacientes
 
 app.get('/api/doctor', (req, res) => {
     res.send('API de médicos!');

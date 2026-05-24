@@ -4,7 +4,11 @@ const patientSchema = new mongoose.Schema({
     name:{ type: String, required: true },
     cpf:{ type: String, required: true, unique: true },
     phone:{ type: String },
-    isPresent:{ type: Boolean, default: true },
+    // clinicaId: associated clinic for multi-tenant isolation
+    clinicaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinica', default: null },
+    // profissionalId: when patient is personal to a professional (no clinic)
+    profissionalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    isPresent:{ type: Boolean, default: false },
     observations:{ type: String },
 }, { timestamps: true });
 

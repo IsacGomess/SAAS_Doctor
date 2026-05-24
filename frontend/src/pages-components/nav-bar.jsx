@@ -9,7 +9,7 @@ export function NavBar({userName}) {
                     Dr<span style={{fontSize:'5px'}}>(a).</span>  {userName.toUpperCase()}
                     </span>
                 <button
-                    className="btn-sm bg-white text-dark fs-6 rounded-3"
+                    className="btn btn-outline-dark btn-sm bg-white text-dark rounded-3 "
                     onClick={() => navigate('/login')}>
                       <i className="bi bi-arrow-bar-right"></i>Sair
                 </button>
