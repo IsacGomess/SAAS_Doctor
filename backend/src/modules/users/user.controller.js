@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const {z }= require('zod');
-const  { User }   = require('../models');
+const User = require('./user.model.js');
 const bcrypt = require('bcrypt');
 
 const userSchema = z.object({

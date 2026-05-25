@@ -1,8 +1,8 @@
 const express = require('express');
 const routes = express.Router();
-const waitingLineController = require('../controllers/waiting-line');
-const authMiddleware = require('../middlewares/auth');
-const limiter = require('../middlewares/rate-limit');
+const waitingLineController = require('./waiting-line.controller.js');
+const authMiddleware = require('../../middlewares/auth.js');
+const limiter = require('../../middlewares/rate-limit.js');
 
 // Middleware de autenticação para todas as rotas
 routes.use(authMiddleware.authenticateToken);

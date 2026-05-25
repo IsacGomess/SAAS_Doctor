@@ -1,5 +1,6 @@
-const { WaitingLine, Patient } = require('../models');
 const { z } = require('zod');
+const WaitingLine = require('./waiting-line.model.js');
+const Patient = require('../patients/patient.model.js');
 
 // Schema Zod para validação de entrada na fila de espera
 const createWaitingLineSchema = z.object({

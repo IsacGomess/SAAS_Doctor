@@ -1,5 +1,8 @@
-const { Patient, MedicalRecord, Evolution ,Prescription} = require('../models');
-const {z} = require('zod');
+const { z} = require('zod');
+const Patient = require('./patient.model.js');
+const MedicalRecord = require('./medicalRecord.model.js');
+const Evolution = require('./evolution.model.js');
+const Prescription = require('./prescription.model.js');
 
 const pacienteSchema = z.object({
     name: z.string()

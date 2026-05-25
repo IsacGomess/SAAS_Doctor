@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
-const { Clinica, User } = require('../models');
+const { Clinica, User } = require('../../../models');
 
 const createClinicaSchema = z.object({
     name: z.string().min(3, 'Nome da clínica deve ter pelo menos 3 caracteres').max(120, 'Nome muito longo').trim(),
