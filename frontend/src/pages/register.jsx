@@ -6,13 +6,13 @@ function Register() {
     const [name,setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [crm, setCrm] = useState("");
+    const [registroProf, setregistroProf] = useState("");
     const navigate = useNavigate(); // Inicializa o hook useNavigate
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.post('/api/users/register', { name, email, password, crm });
+            const response = await api.post('/api/users/register', { name, email, password, registroProf });
 
             if(response.data.token){
                 localStorage.setItem('token', response.data.token);
@@ -285,8 +285,8 @@ function Register() {
                   <input 
                     type="text" 
                     placeholder="00000" 
-                    value={crm} 
-                    onChange={(e) => setCrm(e.target.value)} 
+                    value={registroProf} 
+                    onChange={(e) => setregistroProf(e.target.value)} 
                     required 
                     style={{ 
                       paddingLeft: '48px', 

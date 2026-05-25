@@ -50,7 +50,7 @@ export const Patients = () => {
             setObservations("");
             setIsPresent(true);
         
-
+            
         }catch (error) {
             console.error("Erro ao cadastrar paciente:", error);
         }
@@ -166,7 +166,7 @@ export const Patients = () => {
                                             </td>
                                             <td className="text-muted">{paciente.cpf}</td>
                                             <td className="text-muted">📞 {paciente.phone}</td>
-                                             <td className="text-muted">📞 {paciente.observations}</td>
+                                             <td className="text-muted"> {paciente.observations}</td>
                                             <td className="text-end">
                                                 <button className="btn btn-sm btn-outline-secondary me-2">Ver Histórico</button>
                                                 <button className="btn btn-sm text-white" style={{ backgroundColor: '#1E6B65' }}>Abrir Prontuário</button>

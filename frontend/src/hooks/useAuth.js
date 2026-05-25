@@ -56,7 +56,7 @@ export const useAuth = () => {
                 setIsLoading(false);
             }
         };
-
+        
         initializeAuth();
     }, []);
 

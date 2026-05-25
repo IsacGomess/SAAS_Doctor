@@ -18,9 +18,9 @@ const userSchema = z.object({
         .min(6, "A senha deve ter pelo menos 6 caracteres")
         .max(100, "A senha é longa demais"),
     
-    crm: z.string()
-        .min(4, "CRM inválido")
-        .max(15, "CRM longo demais")
+    registroProf: z.string()
+        .min(4, "Registro inválido")
+        .max(15, " Registro longo longo demais")
         .transform(val => val.trim().toUpperCase()) // ✨ Garante que a UF do CRM fique sempre em maiúsculo (ex: "123456-SP")
 });
 // Importando o modelo User
@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
         });
     }
 
-    const { name, email, password, crm } = validation.data;
+    const { name, email, password, registroProf } = validation.data;
 
     try {
         
@@ -49,7 +49,7 @@ exports.register = async (req, res) => {
             name,
             email,
             password,
-            crm,
+            registroProf,
         });
         return res.status(201).json({ success: true, message: 'Médico registrado com sucesso/Doctor registered successfully', name: newDoctor.name});
     } catch (error) {
