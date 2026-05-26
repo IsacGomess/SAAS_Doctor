@@ -40,7 +40,7 @@ function ClinicaOnboarding() {
       }
 
       try {
-        const response = await api.get('/api/clinicas/me');
+        const response = await api.get('/api/clinics/me');
         if (response.data?.clinica) {
           setClinica(response.data.clinica);
           loadMembros();
@@ -84,7 +84,7 @@ function ClinicaOnboarding() {
     setError(null);
 
     try {
-      const response = await api.post('/api/clinicas', form);
+      const response = await api.post('/api/clinics', form);
 
       if (response.data?.accessToken) {
         // Salva o novo token com clinicaId

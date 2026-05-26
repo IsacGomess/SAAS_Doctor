@@ -51,7 +51,7 @@ exports.register = async (req, res) => {
             password,
             registroProf,
         });
-        return res.status(201).json({ success: true, message: 'Médico registrado com sucesso/Doctor registered successfully', name: newDoctor.name});
+        return res.status(201).json({ success: true, message: ' Registrado com sucesso/registered successfully', name: newDoctor.name});
     } catch (error) {
         console.error("erro no terminal => ",error)
         return res.status(500).json({ message: 'Erro ao registrar médico/Error registering doctor', error: error.message });

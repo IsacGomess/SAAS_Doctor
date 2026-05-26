@@ -9,7 +9,7 @@ export function SelectorsDashboard() {
                 <i className="bi bi-house-door ms-3 pe-2 "></i>Dashboard
             </NavLink>
             <NavLink to="/dashboard/clinica"  className={({isActive}) => `btn btn-color-defaut m-1  fs-5 ${isActive ? 'activo': ''}`}>
-                <i className="bi bi-building ms-2 pe-3 "></i>Minha Clínica
+                <i className="bi bi-building ms-1 pe-3 "></i>Minha Clínica
             </NavLink>
             <NavLink to="/doctor/waiting-line"  className={({isActive}) => `btn btn-color-defaut m-1  fs-5 ${isActive ? 'activo': ''}`}>
                 <i className="bi bi-hourglass-split ms-2 pe-3 "></i>Fila de Espera

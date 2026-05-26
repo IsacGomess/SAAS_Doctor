@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// ✅ IMPORTAR ROTAS DOS MÓDULOS
+// IMPORTAR ROTAS DOS MÓDULOS
 const userRoutes = require('./modules/users/user.routes.js');
 const patientRoutes = require('./modules/patients/patient.routes.js');
 const clinicRoutes = require('./modules/clinics/clinic.routes.js');

@@ -8,13 +8,13 @@ function Dashboard() {
 
     return (
         // vh-100 força o container pai a ocupar exatamente a altura da tela inteira
-        <div className="vh-100 d-flex flex-column pt-5 ps-3 w-100" style={{ backgroundColor: '#F0F4F3', minHeight: '100vh' }}>
+        <div className="vh-100 d-flex flex-column pt-5 ps-1 w-100" style={{ backgroundColor: '#F0F4F3', minHeight: '100vh' }}>
             
             {/* 1. Barra superior do topo */}
             <NavBar userName={username} />
             
             {/* 2. Área principal (Menu Lateral + Conteúdo da Direita) */}
-            <div className="d-flex flex-grow-1 p-0 m-0" style={{ minHeight: 0 }}>
+            <div className="d-flex flex-grow-1 ps-3 m-0" style={{ minHeight: 0 }}>
                 
                 {/* Abaixo, envolvemos o seu menu lateral em uma div flexível que 
                   garante que ele ocupe seu próprio espaço e empurre o resto para a direita

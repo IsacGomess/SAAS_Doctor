@@ -1,6 +1,6 @@
 # 🏗️ DIAGRAMA DE ARQUITETURA - Antes e Depois
 
-## ANTES: Estrutura Vertical (Atual)
+## Estrutura Vertical (Atual)
 
 ```
 backend/

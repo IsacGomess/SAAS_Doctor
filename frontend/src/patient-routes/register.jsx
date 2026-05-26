@@ -17,7 +17,7 @@ export const Patients = () => {
             try {
                 setLoading(true);
                 
-                const response = await api.get("/api/users/patients/atendance-list");
+                const response = await api.get("/api/patients/atendance-list");
 
                 console.log("lista de pacientes:", response.data);                
                 setPatients(response.data.patients);
@@ -40,7 +40,7 @@ export const Patients = () => {
             const newPatient = { name, cpf, phone, observations, isPresent };
         try {
 
-            const response = await api.post("/api/users/patients/register-patient", newPatient);
+            const response = await api.post("/api/patients/register-patient", newPatient);
           
             setShowForm(false);
             // Limpar os campos do formulário
