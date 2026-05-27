@@ -72,7 +72,7 @@ export function WaitingListPanel({
     }
 
     return (
-        <div className="waiting-list-panel">
+        <div className="waiting-list-panel ">
             {/* Cabeçalho com título e contador */}
             <div className="panel-header">
                 <h5 className="panel-title">Fila de Espera</h5>
@@ -108,7 +108,7 @@ export function WaitingListPanel({
                         >
                             {/* Número da fila */}
                             <div className="queue-number">
-                                <span className="badge bg-primary rounded-pill fs-6">
+                                <span className="badge bg-success rounded-pill fs-6">
                                     #{entry.lineNumber}
                                 </span>
                             </div>
@@ -131,7 +131,7 @@ export function WaitingListPanel({
 
                                 {/* Status atual */}
                                 <div className="status-info mb-2">
-                                    <small className="text-muted">
+                                    <small className="text-light">
                                         Status: <strong>{
                                             entry.status === 'aguardando' && 'Aguardando'
                                         }
@@ -153,7 +153,7 @@ export function WaitingListPanel({
                             <div className="patient-actions">
                                 {entry.status === 'aguardando' && (
                                     <button
-                                        className="btn btn-sm btn-outline-primary"
+                                        className="btn btn-sm btn-outline-primary text-light"
                                         onClick={() => handleCallClick(entry._id, patientName)}
                                         disabled={isLoading}
                                     >
@@ -193,7 +193,7 @@ export function WaitingListPanel({
             {/* Rodapé com estatísticas */}
             <div className="panel-footer">
                 <small className="text-muted">
-                    Atualizado automaticamente a cada 15 segundos
+                    Click em chamar para atender paciente 
                 </small>
             </div>
         </div>

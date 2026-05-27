@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom"; 
-import { NavBar } from "../pages-components/nav-bar";
-import { SelectorsDashboard } from "../pages-components/selectors-dashboard";
+import { NavBar } from "../components/NavBar";
+import { SelectorsDashboard } from "../components/SelectorsDashboard";
 
 function Dashboard() {
     const [username, setUserName] = useState(localStorage.getItem("userName") || ""); 

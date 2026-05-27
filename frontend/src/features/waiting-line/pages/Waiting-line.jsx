@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { useWaitingLine } from '../hooks/useWaitingLine';
-import { WaitingListPanel } from '../pages-components/WaitingListPanel';
-import { MedicalRecordPanel } from '../pages-components/MedicalRecordPanel';
-import './DoctorDashboard.css';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
+import { useWaitingLine } from '../../../hooks/useWaitingLine';
+import { WaitingListPanel } from '../components/WaitingListPanel';
+import { MedicalRecordPanel } from '../../medical-record/components/MedicalRecordPanel';
+import './Waiting-line.css';
 
-function DoctorDashboard() {
-  const auth = useAuth();
+function WaitingLine() {
+  const navigate = useNavigate();
+  const auth = useAuth(); // arquivos de autenticaçao global criados em jwt
   const waitingLine = useWaitingLine({
     clinicArea: auth.clinicArea,
-    pollInterval: 15000,
+    pollInterval: null,
+    assignedUserId: auth.userId
   });
 
   const [clinicAreaInput, setClinicAreaInput] = useState('');
@@ -22,12 +25,6 @@ function DoctorDashboard() {
     }
   }, [auth.clinicArea, auth.isLoading, showClinicAreaModal]);
 
-  // Refazer busca quando área da clínica muda
-  useEffect(() => {
-    if (auth.clinicArea) {
-      waitingLine.fetchWaitingLine();
-    }
-  }, [auth.clinicArea]);
 
   const handleSetClinicArea = () => {
     if (clinicAreaInput.trim()) {
@@ -58,6 +55,22 @@ function DoctorDashboard() {
         </div>
 
         <div className="header-controls">
+          <button
+            type="button"
+            className="btn btn-outline-secondary me-3"
+            onClick={() => {
+              auth.refreshUserInfo();
+              navigate('/dashboard/patients');
+            }}
+          >
+            ← Voltar para Pacientes
+          </button>
+          <button type='button' className='btn btn-primary me-3 bg-green'
+                  onClick={waitingLine.fetchWaitingLine}
+                  disabled={waitingLine.isLoading} >
+                    Atualizar Fila
+          </button>
+
           {/* Seletor de Área da Clínica */}
           <div className="clinic-area-selector">
             <label>Área da Clínica:</label>
@@ -82,7 +95,7 @@ function DoctorDashboard() {
             ) : (
               <>
                 <span className="status-dot inactive"></span>
-                <span className="status-text">Polling pausado</span>
+                <span className="status-text">Atualização manual</span>
               </>
             )}
           </div>
@@ -152,4 +165,4 @@ function DoctorDashboard() {
     </div>
   );
 }
-export default DoctorDashboard;
+export default WaitingLine;

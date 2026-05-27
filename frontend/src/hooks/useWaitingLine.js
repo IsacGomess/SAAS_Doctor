@@ -5,7 +5,7 @@ import {
     callPatient, 
     startAttendance, 
     finishConsultation 
-} from '../services/waitingLineService';
+} from '../features/waiting-line/services/waitingLineService';
 
 /**
  * Hook personalizado para gerenciar a fila de espera
@@ -21,7 +21,8 @@ export const useWaitingLine = (options = {}) => {
     const {
         pollInterval = 15000, // 15 segundos por padrão
         clinicArea = null,
-        status = null
+        status = null,
+        assignedUserId = null
     } = options;
 
     // Estado
@@ -29,7 +30,7 @@ export const useWaitingLine = (options = {}) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPatient, setSelectedPatient] = useState(null);
-    const [isPolling, setIsPolling] = useState(true);
+    const [isPolling, setIsPolling] = useState(pollInterval !== null && pollInterval > 0);
 
     // Referência para o intervalo (para limpeza)
     const pollingIntervalRef = useRef(null);
@@ -38,6 +39,7 @@ export const useWaitingLine = (options = {}) => {
     // FETCH - Busca a fila de espera
     // =========================================================================
     const fetchWaitingLine = useCallback(async () => {
+        setIsLoading(true);
         try {
             setError(null);
             
@@ -66,16 +68,20 @@ export const useWaitingLine = (options = {}) => {
     // POLLING - Atualiza a lista automaticamente em intervalos
     // =========================================================================
     useEffect(() => {
+        const shouldUsePolling = pollInterval !== null && pollInterval > 0;
+
+        if (!shouldUsePolling) {
+            fetchWaitingLine();
+            return;
+        }
+
         if (!isPolling) return;
 
         // Busca inicial
-        setIsLoading(true);
         fetchWaitingLine();
 
         // Configura polling automático
-        pollingIntervalRef.current = setInterval(() => {
-            fetchWaitingLine();
-        }, pollInterval);
+        pollingIntervalRef.current = setInterval(fetchWaitingLine, pollInterval);
 
         return () => {
             if (pollingIntervalRef.current) {
@@ -116,7 +122,7 @@ export const useWaitingLine = (options = {}) => {
     const handleStartAttendance = useCallback(async (entryId) => {
         try {
             setError(null);
-            const response = await startAttendance(entryId);
+            const response = await startAttendance(entryId, assignedUserId);
             
             if (response.success) {
                 // Atualiza o paciente na lista
@@ -124,7 +130,7 @@ export const useWaitingLine = (options = {}) => {
                 setWaitingList(prev =>
                     prev.map(entry =>
                         entry._id === entryId
-                            ? { ...entry, status: 'em_atendimento', attendedAt: updatedEntry.attendedAt }
+                            ? { ...entry, status: 'em_atendimento', attendedAt: updatedEntry.attendedAt, assignedTo: updatedEntry.assignedTo }
                             : entry
                     )
                 );
@@ -136,7 +142,7 @@ export const useWaitingLine = (options = {}) => {
             setError(errorMsg);
             throw err;
         }
-    }, []);
+    }, [assignedUserId]);
 
     // =========================================================================
     // FINALIZAR CONSULTA

@@ -37,7 +37,10 @@ const createWaitingLineSchema = z.object({
 // Schema para atualizar status
 const updateStatusSchema = z.object({
     status: z.enum(['aguardando', 'chamado', 'em_atendimento', 'finalizado', 'cancelado']),
-    observations: z.string().optional()
+    observations: z.string().optional(),
+    assignedTo: z.string()
+        .refine(val => val.length === 24, 'ID do usuário inválido')
+        .optional()
 });
 
 // Schema para cancelamento
@@ -224,7 +227,7 @@ exports.updateWaitingLineStatus = async (req, res) => {
 
     try {
         const { id } = req.params;
-        const { status, observations } = validation.data;
+        const { status, observations, assignedTo } = validation.data;
 
         const updateData = { status };
 
@@ -234,9 +237,11 @@ exports.updateWaitingLineStatus = async (req, res) => {
         if (status === 'finalizado') updateData.completedAt = new Date();
 
         if (observations) updateData.observations = observations;
+        if (assignedTo) updateData.assignedTo = assignedTo;
 
         const entry = await WaitingLine.findByIdAndUpdate(id, updateData, { new: true })
-            .populate('patientId', 'name');
+            .populate('patientId', 'name')
+            .populate('assignedTo', 'name email');
 
         if (!entry) {
             return res.status(404).json({

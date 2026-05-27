@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
-import ClinicaOnboarding from './pages/ClinicaOnboarding';
+import Login from './features/auth/pages/Login';
+import Register from './features/auth/pages/Register';
+import Dashboard from './features/dashboard/pages/Dashboard';
+import WaitingLine from './features/waiting-line/pages/Waiting-line';
+import ClinicaOnboarding from './features/dashboard/pages/ClinicaOnboarding';
 import './App.css';
-import { CardsDashboard } from './pages-components/cards-dashboard';
-import { Patients } from './patient-routes/register';
+import { CardsDashboard } from './features/dashboard/components/CardsDashboard';
+import { Patients } from './features/dashboard/pages/Patients';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
@@ -30,7 +30,7 @@ function App() {
 
         <Route 
           path="/doctor/waiting-line" 
-          element={<PrivateRoute><DoctorDashboard /></PrivateRoute>} 
+          element={<PrivateRoute><WaitingLine /></PrivateRoute>} 
         />
 
         {/* Rota padrão */}

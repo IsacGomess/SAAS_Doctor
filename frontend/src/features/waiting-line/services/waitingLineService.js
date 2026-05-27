@@ -1,4 +1,4 @@
-import api from './api';
+import api from '../../../services/api';
 
 /**
  * Serviço centralizado para Fila de Espera (Waiting Line)
@@ -105,6 +105,21 @@ export const updateWaitingLineStatus = async (id, data) => {
 };
 
 // ============================================================================
+// INICIAR ATENDIMENTO (Alias para updateWaitingLineStatus)
+// ============================================================================
+/**
+ * Inicia o atendimento (atualiza para 'em_atendimento')
+ * @param {string} id - ID da entrada na fila
+ * @param {string|null} assignedTo - ID do usuário que iniciou o atendimento
+ * @returns {Promise<Object>} Retorna entrada atualizada
+ */
+export const startAttendance = async (id, assignedTo = null) => {
+    const data = { status: 'em_atendimento' };
+    if (assignedTo) data.assignedTo = assignedTo;
+    return updateWaitingLineStatus(id, data);
+};
+
+// ============================================================================
 // CANCELAR ENTRADA NA FILA
 // ============================================================================
 /**
@@ -122,18 +137,6 @@ export const cancelWaitingLine = async (id, cancelledReason) => {
     } catch (error) {
         throw error.response?.data || { message: 'Erro ao cancelar entrada na fila' };
     }
-};
-
-// ============================================================================
-// INICIAR ATENDIMENTO (Alias para updateWaitingLineStatus)
-// ============================================================================
-/**
- * Inicia o atendimento (atualiza para 'em_atendimento')
- * @param {string} id - ID da entrada na fila
- * @returns {Promise<Object>} Retorna entrada atualizada
- */
-export const startAttendance = async (id) => {
-    return updateWaitingLineStatus(id, { status: 'em_atendimento' });
 };
 
 // ============================================================================
