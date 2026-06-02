@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
-const Clinica = require('./clinic.model.js');
-const User = require('../users/user.model.js');
+const ClinicService = require('./clinic.service.js');
+const UserService = require('../users/user.service.js');
+
 
 const createClinicaSchema = z.object({
     name: z.string().min(3, 'Nome da clínica deve ter pelo menos 3 caracteres').max(120, 'Nome muito longo').trim(),
@@ -26,22 +27,10 @@ exports.createClinica = async (req, res) => {
     }
 
     try {
-        const { name, cnpj, address, phone, email } = validation.data;
 
-        const clinica = await Clinica.create({
-            name,
-            cnpj,
-            address,
-            phone,
-            email,
-            donoId: req.userId
-        });
+        const clinica = await ClinicService.create(validation.data,req.userId);
 
-        const user = await User.findByIdAndUpdate(
-            req.userId,
-            { clinicaId: clinica._id, role: 'administrador' },
-            { new: true }
-        );
+        const user = await UserService.associateClinicAndMakeAdmin(req.userId,clinica._id);
 
         const accessToken = jwt.sign(
             { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
@@ -76,7 +65,7 @@ exports.getMyClinica = async (req, res) => {
     }
 
     try {
-        const clinica = await Clinica.findById(req.clinicaId);
+        const clinica = await ClinicService.findById(req.clinicaId);
         if (!clinica) {
             return res.status(404).json({ success: false, message: 'Clínica não encontrada/Clinic not found' });
         }

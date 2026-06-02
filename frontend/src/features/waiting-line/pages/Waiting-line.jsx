@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
-import { useWaitingLine } from '../../../hooks/useWaitingLine';
+import { useWaitingLine } from '../services/useWaitingLine';
 import { WaitingListPanel } from '../components/WaitingListPanel';
 import { MedicalRecordPanel } from '../../medical-record/components/MedicalRecordPanel';
 import './Waiting-line.css';
@@ -50,8 +50,8 @@ function WaitingLine() {
       {/* CABEÇALHO */}
       <div className="dashboard-header">
         <div className="header-top">
-          <h1>Gerenciamento de Fila de Espera</h1>
-          <p className="greeting">Bem-vindo, Dr. {auth.userName}</p>
+          <h3>Gerenciamento de Fila de Espera</h3>
+          <p className="greeting">Bem-vindo, Dr. {auth.userName.toUpperCase()}</p>
         </div>
 
         <div className="header-controls">
@@ -77,51 +77,40 @@ function WaitingLine() {
             <div className="clinic-area-display">
               <span className="clinic-area-badge">{auth.clinicArea || 'Não selecionada'}</span>
               <button
-                className="btn-alter-area"
+                className="btn-alter-area rounded"
                 onClick={() => setShowClinicAreaModal(true)}
               >
                 Alterar
               </button>
             </div>
           </div>
-
-          {/* Status de Polling */}
-          <div className="polling-status">
-            {waitingLine.isPolling ? (
-              <>
-                <span className="status-dot active"></span>
-                <span className="status-text">Atualização em tempo real</span>
-              </>
-            ) : (
-              <>
-                <span className="status-dot inactive"></span>
-                <span className="status-text">Atualização manual</span>
-              </>
-            )}
-          </div>
+      
         </div>
       </div>
 
       {/* CONTEÚDO PRINCIPAL */}
-      <div className="dashboard-content">
-        {/* Coluna Esquerda: Lista de Espera */}
-        <div className="left-column">
+      <div className="dashboard-content two-columns">
+        {/* Coluna Esquerda: Aguardando */}
+        <div className="left-column compact-column">
+          <h4 className="column-title">Aguardando</h4>
           <WaitingListPanel
             waitingList={waitingLine.waitingList}
-            selectedPatient={waitingLine.selectedPatient}
-            onCallPatient={waitingLine.handleCallPatient}
-            onStartAttendance={waitingLine.handleStartAttendance}
-            onSelectPatient={waitingLine.handleSelectPatient}
+            statusFilter={['aguardando']}
+            onCallPatient={async (id) => { await waitingLine.handleCallPatient(id); await waitingLine.fetchWaitingLine(); }}
+            fetchWaitingLine={waitingLine.fetchWaitingLine}
             isLoading={waitingLine.isLoading}
           />
         </div>
 
-        {/* Coluna Direita: Prontuário */}
-        <div className="right-column">
-          <MedicalRecordPanel
-            patient={waitingLine.selectedPatient}
-            onFinishConsultation={waitingLine.handleFinishConsultation}
-            onClose={waitingLine.clearSelection}
+        {/* Coluna Direita: Chamados / Em Atendimento */}
+        <div className="right-column compact-column">
+          <h4 className="column-title">Chamados / Em Atendimento</h4>
+          <WaitingListPanel
+            waitingList={waitingLine.waitingList}
+            statusFilter={['chamado','em_atendimento']}
+            onFinishConsultation={async (id, obs) => { await waitingLine.handleFinishConsultation(id, obs); await waitingLine.fetchWaitingLine(); }}
+            onRemoveEntry={async (id) => { await waitingLine.handleRemoveEntry(id, 'cancelado_pelo_usuario'); await waitingLine.fetchWaitingLine(); }}
+            fetchWaitingLine={waitingLine.fetchWaitingLine}
             isLoading={waitingLine.isLoading}
           />
         </div>

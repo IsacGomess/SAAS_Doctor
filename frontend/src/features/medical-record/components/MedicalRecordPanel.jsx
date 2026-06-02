@@ -74,6 +74,13 @@ export function MedicalRecordPanel({
     const patientName = patient.patientId?.name || 'Paciente desconhecido';
     const patientPhone = patient.patientId?.phone || 'N/A';
     const patientObservations = patient.patientId?.observations || '';
+    const patientStatus = patient.status || '';
+    const statusLabel = patientStatus === 'em_atendimento' ? 'Em Atendimento'
+        : patientStatus === 'chamado' ? 'Chamado'
+        : patientStatus === 'aguardando' ? 'Aguardando'
+        : patientStatus || 'N/A';
+    const timeValue = patient.attendedAt || patient.calledAt || patient.checkInAt || null;
+    const timeLabel = timeValue ? new Date(timeValue).toLocaleTimeString('pt-BR') : 'N/A';
 
     return (
         <div className="medical-record-panel">
@@ -82,11 +89,11 @@ export function MedicalRecordPanel({
                 <div className="header-content">
                     <h5 className="record-title">Prontuário do Paciente</h5>
                     <div className="patient-status">
-                        <span className="status-badge bg-info">
-                            Em Atendimento
+                        <span className={`status-badge ${patientStatus === 'em_atendimento' ? 'bg-success' : patientStatus === 'chamado' ? 'bg-warning' : 'bg-secondary'}`}>
+                            {statusLabel}
                         </span>
                         <span className="patient-info-small">
-                            Hora: {new Date(patient.attendedAt).toLocaleTimeString('pt-BR')}
+                            {patient.attendedAt ? 'Hora atendimento:' : patient.calledAt ? 'Hora chamado:' : 'Entrada:'} {timeLabel}
                         </span>
                     </div>
                 </div>

@@ -4,8 +4,9 @@ import {
     getWaitingLineById, 
     callPatient, 
     startAttendance, 
-    finishConsultation 
-} from '../features/waiting-line/services/waitingLineService';
+    finishConsultation,
+    cancelWaitingLine
+} from './waitingLineService';
 
 /**
  * Hook personalizado para gerenciar a fila de espera
@@ -107,6 +108,19 @@ export const useWaitingLine = (options = {}) => {
                             : entry
                     )
                 );
+
+                // Limpa seleção anterior e seleciona apenas o nome do paciente
+                const minimalSelection = {
+                    _id: entryId,
+                    patientId: {
+                        name: response.entry?.patientId?.name || 'Paciente'
+                    },
+                    status: 'chamado'
+                };
+                // remove qualquer seleção prévia para garantir limpeza total da tela direita
+                setSelectedPatient(null);
+                // define seleção mínima (somente nome)
+                setSelectedPatient(minimalSelection);
                 return response.entry;
             }
         } catch (err) {
@@ -115,6 +129,26 @@ export const useWaitingLine = (options = {}) => {
             throw err;
         }
     }, []);
+
+    // Remover/Cancelar entrada da fila
+    const handleRemoveEntry = useCallback(async (entryId, reason = 'removido_por_usuario') => {
+        try {
+            setError(null);
+            const response = await cancelWaitingLine(entryId, reason);
+
+            if (response.success) {
+                setWaitingList(prev => prev.filter(entry => entry._id !== entryId));
+                if (selectedPatient && selectedPatient._id === entryId) {
+                    setSelectedPatient(null);
+                }
+                return response.entry;
+            }
+        } catch (err) {
+            const errorMsg = err.message || 'Erro ao remover entrada';
+            setError(errorMsg);
+            throw err;
+        }
+    }, [selectedPatient]);
 
     // =========================================================================
     // INICIAR ATENDIMENTO
@@ -230,6 +264,7 @@ export const useWaitingLine = (options = {}) => {
         handleCallPatient,
         handleStartAttendance,
         handleFinishConsultation,
+        handleRemoveEntry,
         handleSelectPatient,
         clearSelection,
         togglePolling,

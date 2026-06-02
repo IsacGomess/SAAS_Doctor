@@ -10,6 +10,7 @@
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    color:white;
 }
 
 /* Cabeçalho do painel */
@@ -26,7 +27,7 @@
     margin: 0;
     font-weight: 600;
     font-size: 18px;
-    color: #2c3e50;
+    color:white;
     letter-spacing: 0.3px;
 }
 
@@ -198,6 +199,48 @@
     cursor: not-allowed;
 }
 
+/* Compact mode: reduce visual size dramatically (~80% smaller) for dense display */
+.compact-column .waiting-list-panel {
+    border-radius: 6px;
+}
+
+.compact-column .panel-header {
+    padding: 8px 10px;
+}
+
+.compact-column .panel-title {
+    font-size: 12px;
+}
+
+.compact-column .patient-list {
+    padding: 6px;
+}
+
+.compact-column .patient-card {
+    padding: 6px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    gap: 6px;
+}
+
+.compact-column .queue-number .badge {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.compact-column .patient-name {
+    font-size: 12px;
+}
+
+.compact-column .patient-actions {
+    gap: 6px;
+}
+
+.btn-compact {
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
 /* Rodapé do painel */
 .panel-footer {
     padding: 12px 20px;
@@ -238,7 +281,7 @@
 /* Dark mode (se implementado) */
 @media (prefers-color-scheme: dark) {
     .waiting-list-panel {
-        background-color: #1e1e1e;
+        background-color:#f0f4f3;
     }
 
     .panel-header {

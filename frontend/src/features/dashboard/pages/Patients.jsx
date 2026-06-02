@@ -1,7 +1,7 @@
 import api from "../../../services/api";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../hooks/useAuth";
-import { createWaitingLineEntry } from "../../../features/waiting-line/services/waitingLineService";
+import { createWaitingLineEntry, getWaitingLine } from "../../../features/waiting-line/services/waitingLineService";
 
 export const Patients = () => {
   const auth = useAuth();
@@ -59,6 +59,28 @@ export const Patients = () => {
 
     try {
       setAddingPatientId(paciente._id);
+      // Verifica se já existe entrada do mesmo paciente no mesmo dia
+      try {
+        const listResp = await getWaitingLine({ clinicArea: auth.clinicArea });
+        const todays = (listResp.waitingLine || []).filter(entry => {
+          const pid = entry.patientId && (entry.patientId._id || entry.patientId);
+          if (!pid) return false;
+          if (pid.toString() !== paciente._id.toString()) return false;
+          const checkIn = entry.checkInAt || entry.calledAt || entry.attendedAt;
+          if (!checkIn) return false;
+          const d = new Date(checkIn);
+          const today = new Date();
+          return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate() && entry.status !== 'finalizado' && entry.status !== 'cancelado';
+        });
+        if (todays.length > 0) {
+          alert('Este paciente já foi inserido na fila hoje.');
+          setAddingPatientId(null);
+          return;
+        }
+      } catch (err) {
+        // Se falhar a verificação, seguir com criação (backend deve proteger também)
+        console.warn('Falha ao verificar duplicatas na fila:', err);
+      }
       const payload = {
         patientId: paciente._id,
         assignedTo: auth.userId,

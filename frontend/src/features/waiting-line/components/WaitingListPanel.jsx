@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import './WaitingListPanel.css';
+import { useAuth } from '../../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import patientService from '../../patients/patientService';
 
 /**
  * Componente que exibe a lista de pacientes aguardando na fila de espera
@@ -16,24 +19,36 @@ import './WaitingListPanel.css';
 export function WaitingListPanel({
     waitingList = [],
     selectedPatient = null,
+    statusFilter = null,
     onCallPatient = () => {},
     onStartAttendance = () => {},
     onSelectPatient = () => {},
+    onFinishConsultation = () => {},
+    onRemoveEntry = () => {},
+    fetchWaitingLine = () => {},
     isLoading = false
 }) {
-    // Filtra apenas pacientes aguardando ou chamados
-    const visiblePatients = waitingList.filter(entry =>
-        entry.status === 'aguardando' || entry.status === 'chamado'
-    );
+    // Filtra pela lista de status passada; se não houver, mantém antigo comportamento
+    const visiblePatients = waitingList.filter(entry => {
+        if (Array.isArray(statusFilter) && statusFilter.length > 0) return statusFilter.includes(entry.status);
+        return entry.status === 'aguardando' || entry.status === 'chamado';
+    });
 
     // Estado para rastrear qual paciente está em processo
     const [loadingPatientId, setLoadingPatientId] = useState(null);
+    const [showMedicalModalFor, setShowMedicalModalFor] = useState(null);
+    const [showEvolutionModalFor, setShowEvolutionModalFor] = useState(null);
+    const [medicalForm, setMedicalForm] = useState({ title: '', diagnosis: '', plan: '' });
+    const [evolutionText, setEvolutionText] = useState('');
+    const auth = useAuth();
+    const navigate = useNavigate();
 
     // Manipula o clique em "Chamar Paciente"
     const handleCallClick = async (entryId, patientName) => {
         setLoadingPatientId(entryId);
         try {
             await onCallPatient(entryId);
+            if (fetchWaitingLine) await fetchWaitingLine();
             console.log(`Paciente ${patientName} chamado com sucesso`);
         } catch (error) {
             console.error('Erro ao chamar paciente:', error);
@@ -42,32 +57,109 @@ export function WaitingListPanel({
         }
     };
 
-    // Manipula o clique em "Iniciar Atendimento"
-    const handleStartAttendanceClick = async (entryId, patientName) => {
+    // Manipula o clique em "Finalizar Consulta" para entradas chamadas/em atendimento
+    const handleFinishClick = async (entryId, obs = '') => {
         setLoadingPatientId(entryId);
         try {
-            await onStartAttendance(entryId);
-            console.log(`Atendimento iniciado para ${patientName}`);
-            onSelectPatient(entryId);
+            await onFinishConsultation(entryId, obs);
+            if (fetchWaitingLine) await fetchWaitingLine();
+            console.log(`Consulta finalizada para ${entryId}`);
         } catch (error) {
-            console.error('Erro ao iniciar atendimento:', error);
+            console.error('Erro ao finalizar consulta:', error);
         } finally {
             setLoadingPatientId(null);
+        }
+    };
+
+    // Abertura dos modais
+    const openMedicalModal = (entryId) => {
+        setMedicalForm({ title: '', diagnosis: '', plan: '' });
+        setShowMedicalModalFor(entryId);
+    };
+
+    const openEvolutionModal = (entryId) => {
+        setEvolutionText('');
+        setShowEvolutionModalFor(entryId);
+    };
+
+    const submitMedicalRecord = async (entryId) => {
+        try {
+            const patientEntry = waitingList.find(e => e._id === entryId);
+            const patientId = patientEntry?.patientId?._id || patientEntry?.patientId;
+            await patientService.createMedicalRecord({
+                patientId,
+                title: medicalForm.title,
+                diagnosis: medicalForm.diagnosis,
+                plan: medicalForm.plan
+            });
+            alert('Prontuário salvo com sucesso');
+            setShowMedicalModalFor(null);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao salvar prontuário');
+        }
+    };
+
+    const submitEvolution = async (entryId) => {
+        try {
+            const patientEntry = waitingList.find(e => e._id === entryId);
+            const patientId = patientEntry?.patientId?._id || patientEntry?.patientId;
+            await patientService.createEvolution({
+                patientId,
+                notes: evolutionText
+            });
+            alert('Evolução registrada com sucesso');
+            setShowEvolutionModalFor(null);
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao salvar evolução');
         }
     };
 
     // Render de estado vazio
     if (!isLoading && visiblePatients.length === 0) {
         return (
-            <div className="waiting-list-panel">
-                <div className="panel-header">
-                    <h5 className="panel-title">Fila de Espera</h5>
-                    <span className="badge bg-secondary">0</span>
+            <>
+                <div className="waiting-list-panel">
+                    <div className="panel-header">
+                        <h5 className="panel-title">Fila de Espera</h5>
+                        <span className="badge bg-secondary">0</span>
+                    </div>
+                    <div className="empty-state">
+                        <p className="text-muted">Nenhum paciente na fila no momento</p>
+                    </div>
                 </div>
-                <div className="empty-state">
-                    <p className="text-muted">Nenhum paciente na fila no momento</p>
-                </div>
-            </div>
+
+                {/* Modal simples para Criar Prontuário */}
+                {showMedicalModalFor && (
+                    <div className="modal-overlay" onClick={() => setShowMedicalModalFor(null)}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <h5>Nova Avaliação</h5>
+                            <input placeholder="Título" value={medicalForm.title} onChange={(e)=>setMedicalForm({...medicalForm, title: e.target.value})} />
+                            <textarea placeholder="Diagnóstico" value={medicalForm.diagnosis} onChange={(e)=>setMedicalForm({...medicalForm, diagnosis: e.target.value})} />
+                            <textarea placeholder="Plano" value={medicalForm.plan} onChange={(e)=>setMedicalForm({...medicalForm, plan: e.target.value})} />
+                            <div className="modal-actions">
+                                <button className="btn btn-secondary" onClick={()=>setShowMedicalModalFor(null)}>Cancelar</button>
+                                <button className="btn btn-success" onClick={()=>submitMedicalRecord(showMedicalModalFor)}>Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal simples para Evolução */}
+                {showEvolutionModalFor && (
+                    <div className="modal-overlay" onClick={() => setShowEvolutionModalFor(null)}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <h5>Nova Evolução</h5>
+                            <textarea placeholder="Evolução clínica" value={evolutionText} onChange={(e)=>setEvolutionText(e.target.value)} />
+                            <div className="modal-actions">
+                                <button className="btn btn-secondary" onClick={()=>setShowEvolutionModalFor(null)}>Cancelar</button>
+                                <button className="btn btn-success" onClick={()=>submitEvolution(showEvolutionModalFor)}>Salvar</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </>
         );
     }
 
@@ -75,7 +167,7 @@ export function WaitingListPanel({
         <div className="waiting-list-panel ">
             {/* Cabeçalho com título e contador */}
             <div className="panel-header">
-                <h5 className="panel-title">Fila de Espera</h5>
+                <h4 className="panel-title">Fila de Espera</h4>
                 <span className="badge bg-info">{visiblePatients.length}</span>
             </div>
 
@@ -100,7 +192,7 @@ export function WaitingListPanel({
                         prioritario: 'bg-warning-subtle text-warning',
                         emergencia: 'bg-danger-subtle text-danger'
                     }[entry.priority] || 'bg-secondary-subtle';
-
+                            
                     return (
                         <div
                             key={entry._id}
@@ -151,38 +243,56 @@ export function WaitingListPanel({
 
                             {/* Botões de ação */}
                             <div className="patient-actions">
-                                {entry.status === 'aguardando' && (
+                                {/* Compact behavior: left column shows only Chamar; right shows Finalizar + Cancelar */}
+                                {Array.isArray(statusFilter) && statusFilter.includes('aguardando') && (
                                     <button
-                                        className="btn btn-sm btn-outline-primary text-light"
+                                        className="btn btn-sm btn-compact btn-outline-primary"
                                         onClick={() => handleCallClick(entry._id, patientName)}
                                         disabled={isLoading}
                                     >
-                                        {isLoading ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                Chamando...
-                                            </>
-                                        ) : (
-                                            '📢 Chamar'
-                                        )}
+                                        {isLoading ? 'Chamando...' : '📢 Chamar'}
                                     </button>
                                 )}
 
-                                {entry.status === 'chamado' && (
-                                    <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleStartAttendanceClick(entry._id, patientName)}
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                Iniciando...
-                                            </>
-                                        ) : (
-                                            '▶ Iniciar Atendimento'
-                                        )}
-                                    </button>
+                                {Array.isArray(statusFilter) && (statusFilter.includes('chamado') || statusFilter.includes('em_atendimento')) && (
+                                    <>
+                                        <button
+                                            className="btn btn-sm btn-compact btn-primary me-2"
+                                            onClick={() => handleFinishClick(entry._id, '')}
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? 'Finalizando...' : '✅ Finalizar Consulta'}
+                                        </button>
+
+                                        <button
+                                            className="btn btn-sm btn-compact btn-outline-danger"
+                                            onClick={async () => { setLoadingPatientId(entry._id); try { await onRemoveEntry(entry._id, 'cancelado_pelo_usuario'); if (fetchWaitingLine) await fetchWaitingLine(); } catch(e){console.error(e);} finally { setLoadingPatientId(null); } }}
+                                            disabled={isLoading}
+                                        >
+                                            ❌ Cancelar
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Fallback: mantém botões completos em caso de uso sem statusFilter */}
+                                {!statusFilter && (
+                                    <>
+                                        <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openMedicalModal(entry._id)}>
+                                            Avaliação
+                                        </button>
+
+                                        <button className="btn btn-sm btn-outline-info me-2" onClick={() => openEvolutionModal(entry._id)}>
+                                            Evolução
+                                        </button>
+
+                                        <button
+                                            className="btn btn-sm btn-outline-danger"
+                                            onClick={() => onRemoveEntry(entry._id, 'cancelado_pelo_usuario') }
+                                            disabled={isLoading}
+                                        >
+                                            🗑️ Remover
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>

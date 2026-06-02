@@ -8,6 +8,7 @@
     height: 100%;
     width: 100%;
     background-color: #f0f4f3;
+    
 }
 
 /* Estado de carregamento */
@@ -27,10 +28,14 @@
 
 /* Cabeçalho do dashboard */
 .dashboard-header {
+    position:fixed;
+    top: 0;
+    padding: 5px;
+    height: 15%;
+    width: 100%;
+    gap: 16px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px;
+    justify-content: flex-start;
     background: linear-gradient(135deg, #1e6b65 0%, #155350 100%);
     color: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -57,8 +62,9 @@
 /* Controles do cabeçalho */
 .header-controls {
     display: flex;
-    gap: 24px;
-    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
 }
 
 /* Seletor de área da clínica */
@@ -145,6 +151,17 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+}
+
+/* Compact two-column adjustments */
+.two-columns .compact-column {
+    max-width: 520px;
+}
+
+.two-columns .column-title {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .left-column,
