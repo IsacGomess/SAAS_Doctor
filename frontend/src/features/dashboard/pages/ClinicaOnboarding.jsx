@@ -30,6 +30,12 @@ function ClinicaOnboarding() {
   const [messageMembro, setMessageMembro] = useState(null);
   const [errorMembro, setErrorMembro] = useState(null);
   const [deletingMembroId, setDeletingMembroId] = useState(null);
+  const [convenios, setConvenios] = useState([]);
+  const [isLoadingConvenios, setIsLoadingConvenios] = useState(false);
+  const [newConvenioName, setNewConvenioName] = useState("");
+  const [messageConvenio, setMessageConvenio] = useState(null);
+  const [errorConvenio, setErrorConvenio] = useState(null);
+  const [togglingConvenioId, setTogglingConvenioId] = useState(null);
 
   // Carregar clínica
   useEffect(() => {
@@ -44,6 +50,7 @@ function ClinicaOnboarding() {
         if (response.data?.clinica) {
           setClinica(response.data.clinica);
           loadMembros();
+          loadConvenios();
         }
       } catch (err) {
         console.error('Erro ao buscar clínica:', err);
@@ -65,6 +72,19 @@ function ClinicaOnboarding() {
       console.error('Erro ao buscar membros:', err);
     } finally {
       setIsLoadingMembros(false);
+    }
+  };
+
+  // Carregar convênios
+  const loadConvenios = async () => {
+    setIsLoadingConvenios(true);
+    try {
+      const response = await api.get('/api/convenios/list');
+      setConvenios(response.data.convenios || []);
+    } catch (err) {
+      console.error('Erro ao buscar convênios:', err);
+    } finally {
+      setIsLoadingConvenios(false);
     }
   };
 
@@ -152,6 +172,45 @@ function ClinicaOnboarding() {
       setErrorMembro(details);
     } finally {
       setDeletingMembroId(null);
+    }
+  };
+
+  const handleCreateConvenio = async (e) => {
+    e.preventDefault();
+    setMessageConvenio(null);
+    setErrorConvenio(null);
+
+    if (!newConvenioName.trim()) {
+      setErrorConvenio('O nome do convênio é obrigatório');
+      return;
+    }
+
+    try {
+      await api.post('/api/convenios/create', { nome: newConvenioName.trim() });
+      setNewConvenioName('');
+      setMessageConvenio('Convênio adicionado com sucesso!');
+      loadConvenios();
+    } catch (err) {
+      console.error('❌ Erro ao adicionar convênio:', err);
+      const details = err.response?.data?.message || err.message || 'Erro ao adicionar convênio';
+      setErrorConvenio(details);
+    }
+  };
+
+  const handleToggleConvenioStatus = async (convenioId, convenioNome, currentStatus) => {
+    const novoStatus = !currentStatus;
+    setTogglingConvenioId(convenioId);
+    try {
+      await api.put(`/api/convenios/${convenioId}/toggle`);
+      const statusText = novoStatus ? 'ativado' : 'desativado';
+      setMessageConvenio(`Convênio ${statusText} com sucesso!`);
+      loadConvenios();
+    } catch (err) {
+      console.error('❌ Erro ao atualizar convênio:', err);
+      const details = err.response?.data?.message || err.message || 'Erro ao atualizar convênio';
+      setErrorConvenio(details);
+    } finally {
+      setTogglingConvenioId(null);
     }
   };
 
@@ -394,6 +453,113 @@ function ClinicaOnboarding() {
                         </button>
                       )}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SEÇÃO DE GERENCIAMENTO DE CONVÊNIOS */}
+      {auth.clinicaId && clinica && (
+        <div style={{ marginTop: 32 }}>
+          <h3>Gerenciar Planos de Saúde / Convênios</h3>
+          <p>Adicione ou remova planos de saúde disponíveis para seus pacientes.</p>
+
+          {/* Formulário de Novo Convênio */}
+          <div className="card p-4 mb-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)', marginTop: 16 }}>
+            <h4>Adicionar Novo Convênio</h4>
+            <form onSubmit={handleCreateConvenio} style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <input
+                type="text"
+                value={newConvenioName}
+                onChange={(e) => setNewConvenioName(e.target.value)}
+                placeholder="Ex: Allianz Saúde, Geap, Mediservice..."
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  border: '1px solid #ccc',
+                  fontSize: 14
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#1E6B65',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                + Adicionar Convênio
+              </button>
+            </form>
+            {messageConvenio && <div style={{ marginTop: 12, color: '#27ae60', fontWeight: 500 }}>✅ {messageConvenio}</div>}
+            {errorConvenio && <div style={{ marginTop: 12, color: '#c0392b', fontWeight: 500 }}>❌ {errorConvenio}</div>}
+          </div>
+
+          {/* Lista de Convênios */}
+          <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+            <h4>Convênios Cadastrados ({convenios.filter(c => c.ativo).length})</h4>
+            {isLoadingConvenios ? (
+              <p>Carregando convênios...</p>
+            ) : convenios.length === 0 ? (
+              <p style={{ color: '#999', marginTop: 12 }}>Nenhum convênio cadastrado ainda.</p>
+            ) : (
+              <div style={{ marginTop: 16 }}>
+                {convenios.map((convenio) => (
+                  <div
+                    key={convenio._id}
+                    style={{
+                      padding: 12,
+                      marginBottom: 8,
+                      borderRadius: 8,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      backgroundColor: convenio.ativo ? '#f9f9f9' : '#f0f0f0',
+                      border: `1px solid ${convenio.ativo ? '#e0e0e0' : '#d0d0d0'}`,
+                      opacity: convenio.ativo ? 1 : 0.7
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: convenio.ativo ? '#333' : '#999' }}>{convenio.nome}</strong>
+                      <p style={{ 
+                        margin: '4px 0 0 0', 
+                        fontSize: 12, 
+                        color: convenio.ativo ? '#1E6B65' : '#999',
+                        fontWeight: 500
+                      }}>
+                        {convenio.ativo ? '✅ Ativo' : '⛔ Desativado'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleConvenioStatus(convenio._id, convenio.nome, convenio.ativo)}
+                      disabled={togglingConvenioId === convenio._id}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        border: 'none',
+                        background: convenio.ativo ? '#c0392b' : '#27ae60',
+                        color: '#fff',
+                        cursor: togglingConvenioId === convenio._id ? 'not-allowed' : 'pointer',
+                        opacity: togglingConvenioId === convenio._id ? 0.6 : 1,
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {togglingConvenioId === convenio._id 
+                        ? 'Atualizando...' 
+                        : convenio.ativo ? '🗑️ Desativar' : '✓ Ativar'
+                      }
+                    </button>
                   </div>
                 ))}
               </div>

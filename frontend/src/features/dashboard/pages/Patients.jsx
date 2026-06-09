@@ -1,10 +1,12 @@
 import api from "../../../services/api";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { createWaitingLineEntry, getWaitingLine } from "../../../features/waiting-line/services/waitingLineService";
 
 export const Patients = () => {
   const auth = useAuth();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -13,8 +15,14 @@ export const Patients = () => {
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
   const [phone, setPhone] = useState("");
+  const [idade, setIdade] = useState("");
   const [observations, setObservations] = useState("");
   const [isPresent, setIsPresent] = useState(true);
+  const [convenios, setConvenios] = useState([]);
+  const [selectedConvenioId, setSelectedConvenioId] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
 
   const searchPatients = async () => {
       try {
@@ -29,25 +37,84 @@ export const Patients = () => {
         setLoading(false);
       }
     };
+
+  const fetchConvenios = async () => {
+    if (!auth.clinicaId) return;
+    try {
+      const response = await api.get("/api/convenios/list");
+      setConvenios(response.data.convenios || []);
+    } catch (error) {
+      console.error("Erro ao buscar convênios:", error);
+      setConvenios([]);
+    }
+  };
+
+  useEffect(() => {
+    if (auth.isLoading) return;
+    fetchConvenios();
+  }, [auth.isLoading, auth.clinicaId]);
+
+  const getConvenioLabel = (paciente) => {
+    if (!paciente?.convenioId) return 'Particular';
+
+    const convenio = convenios.find(
+      (c) => c._id === paciente.convenioId || c._id === paciente.convenioId?._id
+    );
+
+    return convenio?.nome || 'Particular';
+  };
+
   useEffect(() => {
     if (auth.isLoading) return;
     searchPatients();
   }, [auth.isLoading]);
 
+  const filteredPatients = patients.filter((paciente) => {
+  const term = (searchText || "").trim().toLowerCase();
+  if (term === "") return true;
+
+  const nomePaciente = (paciente.name || "").toLowerCase();
+  const cpfPaciente = String(paciente.cpf || "").replace(/\D/g, "");
+  const termNumeros = term.replace(/\D/g, "");
+
+  const bateNoNome = nomePaciente.includes(term);
+  const bateNoCpf = termNumeros !== "" && cpfPaciente.includes(termNumeros);
+
+  return bateNoNome || bateNoCpf;
+});
+
   const dataBaseCadaster = async (e) => {
     e.preventDefault();
-    const newPatient = { name, cpf, phone, observations, isPresent };
+    setFormError("");
+    setFormSuccess("");
+
+    const newPatient = { 
+      name, 
+      cpf, 
+      phone, 
+      idade: idade !== '' ? Number(idade) : undefined,
+      observations, 
+      isPresent,
+      convenioId: selectedConvenioId || null
+    };
 
     try {
       await api.post("/api/patients/register-patient", newPatient);
+      setFormSuccess("✅ Paciente cadastrado com sucesso!");
       setShowForm(false);
       setName("");
       setCpf("");
       setPhone("");
+      setIdade("");
       setObservations("");
       setIsPresent(true);
+      setSelectedConvenioId("");
+      searchPatients(); // Atualiza a lista de pacientes
+      setTimeout(() => setFormSuccess(""), 3000);
     } catch (error) {
       console.error("Erro ao cadastrar paciente:", error);
+      const errorMsg = error.response?.data?.message || error.message || 'Erro ao cadastrar paciente';
+      setFormError(`❌ ${errorMsg}`);
     }
   };
 
@@ -108,27 +175,47 @@ export const Patients = () => {
   }
 
   return (
-    <div className="container-fluid pt-5 ps-0 pe-1 w-100" style={{ minHeight: '100%' }}>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div className="container-fluid pt-5 ps-1 pe-0 w-100" style={{ minHeight: '100%' }}>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
           <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Pacientes</h2>
           <p className="text-muted m-0">Gerencie os prontuários e cadastros da sua clínica</p>
         </div>
-        {!showForm && (
-          <button
-            className="btn text-white px-4 py-2 shadow-sm"
-            style={{ backgroundColor: '#1E6B65' }}
-            onClick={() => setShowForm(true)}
-          >
-            + Novo Paciente
-          </button>
-        )}
+        <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-md-auto">
+          <input
+            type="search"
+            className="form-control"
+            style={{ minWidth: '220px', maxWidth: '320px' }}
+            placeholder="Buscar por nome ou CPF"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          {!showForm && (
+            <button
+              className="btn text-white px-4 py-2 shadow-sm"
+              style={{ backgroundColor: '#1E6B65' }}
+              onClick={() => setShowForm(true)}
+            >
+              + Novo Paciente
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (
         <div className="card border-0 shadow-sm rounded-3 mb-4 animate__animated animate__fadeIn">
           <div className="card-body p-4">
             <h5 className="fw-bold mb-3" style={{ color: '#1E6B65' }}>Cadastrar Novo Paciente</h5>
+            {formError && (
+              <div className="alert alert-danger mb-3" role="alert">
+                {formError}
+              </div>
+            )}
+            {formSuccess && (
+              <div className="alert alert-success mb-3" role="alert">
+                {formSuccess}
+              </div>
+            )}
             <form onSubmit={dataBaseCadaster}>
               <div className="row g-3">
                 <div className="col-12 col-md-4">
@@ -164,17 +251,41 @@ export const Patients = () => {
                     placeholder="(81) 99999-9999"
                   />
                 </div>
-                <div className="col-12 col-md-4">
+                <div className="col-12 col-md-2">
+                  <label className="form-label text-muted small fw-bold">Idade</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    min={0}
+                    max={150}
+                    value={idade}
+                    onChange={(e) => setIdade(e.target.value)}
+                    placeholder="Idade"
+                  />
+                </div>
+                <div className="col-12 col-md-6">
                   <label className="form-label text-muted small fw-bold">Observações</label>
                   <input
                     type="text"
                     className="form-control"
-                    required
                     value={observations}
                     onChange={(e) => setObservations(e.target.value)}
                     maxLength={70}
                     placeholder="Observações sobre o paciente"
                   />
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label text-muted small fw-bold">Plano de Saúde</label>
+                  <select
+                    className="form-select"
+                    value={selectedConvenioId}
+                    onChange={(e) => setSelectedConvenioId(e.target.value)}
+                  >
+                    <option value="">Particular (Sem Convênio)</option>
+                    {convenios.map((c) => (
+                      <option key={c._id} value={c._id}>{c.nome}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="d-flex gap-2 justify-content-end mt-4">
@@ -190,69 +301,78 @@ export const Patients = () => {
         </div>
       )}
 
-      {patients.length === 0 ? (
-        <div className="card border-0 shadow-sm rounded-3 text-center py-5">
-          <div className="card-body py-5">
-            <div className="fs-1 mb-3">👥</div>
-            <h4 className="fw-bold text-dark">Nenhum paciente cadastrado</h4>
-            <p className="text-muted mx-auto" style={{ maxWidth: '400px' }}>
-              Você ainda não possui pacientes vinculados ao seu perfil. Comece cadastrando o seu primeiro paciente agora mesmo!
-            </p>
-            {!showForm && (
-              <button
-                className="btn text-white mt-2 px-4 shadow-sm"
-                style={{ backgroundColor: '#1E6B65' }}
-                onClick={() => setShowForm(true)}
-              >
-                Cadastrar meu primeiro paciente
-              </button>
-            )}
-          </div>
+      {filteredPatients.length === 0 ? (
+      <div className="card border-0 shadow-sm rounded-3 text-center py-5">
+        <div className="card-body py-5">
+          <div className="fs-1 mb-3">🔍</div>
+          <h4 className="fw-bold text-dark">Nenhum paciente encontrado</h4>
+          <p className="text-muted mx-auto" style={{ maxWidth: '400px' }}>
+            {searchText ? `Não encontramos resultados para "${searchText}"` : "Você ainda não possui pacientes vinculados ao seu perfil."}
+          </p>
+          {!showForm && !searchText && (
+            <button
+              className="btn text-white mt-2 px-4 shadow-sm"
+              style={{ backgroundColor: '#1E6B65' }}
+              onClick={() => setShowForm(true)}
+            >
+              Cadastrar meu primeiro paciente
+            </button>
+          )}
         </div>
+      </div>
       ) : (
-        <div className="card border-0 shadow-sm rounded-3">
-          <div className="card-body p-4">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle m-0">
-                <thead className="table-light">
-                  <tr>
-                    <th>Nome do Paciente</th>
-                    <th>CPF</th>
-                    <th>Contato</th>
-                    <th>Observações</th>
-                    <th className="text-end">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {patients.map((paciente) => (
-                    <tr key={paciente._id}>
-                      <td>
-                        <div className="fw-bold text-dark">{paciente.name}</div>
-                      </td>
-                      <td className="text-muted">{paciente.cpf}</td>
-                      <td className="text-muted">📞 {paciente.phone}</td>
-                      <td className="text-muted">{paciente.observations}</td>
-                      <td className="text-end">
-                        <button className="btn btn-sm btn-outline-secondary me-2">Ver Histórico</button>
+      <div className="card border-0 shadow-sm rounded-3">
+        <div className="card-body p-4">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle m-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Nome do Paciente</th>
+                  <th>CPF</th>
+                  <th>Idade</th>
+                  <th>Contato</th>
+                  <th>Observações</th>
+                  <th className="text-end">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPatients.map((paciente) => (
+                  <tr key={paciente._id}>
+                    <td>
+                      <div className="fw-bold text-dark">{paciente.name}</div>
+                      <small className="text-muted d-block">
+                        Plano: {getConvenioLabel(paciente)}
+                      </small>
+                    </td>
+                    <td className="text-muted">{paciente.cpf}</td>
+                    <td className="text-muted">{paciente.idade ?? '-'}</td>
+                    <td className="text-muted">📞 {paciente.phone}</td>
+                    <td className="text-muted">{paciente.observations}</td>
+                    <td className="text-end">
+                      <div className="d-flex flex-wrap justify-content-end gap-2">
                         <button
-                          className="btn btn-sm btn-outline-success me-2"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => navigate(`/dashboard/patients/${paciente._id}/history`)}
+                        >
+                          Prontuário 
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-success"
                           disabled={addingPatientId === paciente._id}
                           onClick={() => handleAddToWaitingLine(paciente)}
                         >
-                          {addingPatientId === paciente._id ? 'Adicionando...' : 'Adicionar à Fila'}
+                          {addingPatientId === paciente._id ? 'Adicionando...' : 'Adicionar à Fila de espera'}
                         </button>
-                        <button className="btn btn-sm text-white" style={{ backgroundColor: '#1E6B65' }}>
-                          Abrir Prontuário
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 };

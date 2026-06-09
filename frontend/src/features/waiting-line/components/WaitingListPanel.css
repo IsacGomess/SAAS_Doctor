@@ -10,7 +10,19 @@
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    color:white;
+    color: #ffffff;
+}
+
+.waiting-list-panel,
+.waiting-list-panel .panel-header,
+.waiting-list-panel .patient-card,
+.waiting-list-panel .patient-info,
+.waiting-list-panel .patient-info small,
+.waiting-list-panel .status-info,
+.waiting-list-panel .waiting-time,
+.waiting-list-panel .patient-actions .btn,
+.waiting-list-panel .empty-state {
+    color: #ffffff;
 }
 
 /* Cabeçalho do painel */
@@ -19,15 +31,15 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 20px;
-    border-bottom: 1px solid #e0e0e0;
-    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(21, 83, 80, 0.4);
 }
 
 .panel-title {
     margin: 0;
     font-weight: 600;
     font-size: 18px;
-    color:white;
+    color: #ffffff;
     letter-spacing: 0.3px;
 }
 
@@ -35,6 +47,8 @@
     font-size: 14px;
     padding: 6px 12px;
     font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
 }
 
 /* Estado vazio */
@@ -59,8 +73,9 @@
     align-items: center;
     justify-content: center;
     padding: 15px 20px;
-    background-color: #f0f4f3;
-    border-bottom: 1px solid #e0e0e0;
+    background-color: rgba(21, 83, 80, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
 }
 
 .loading-spinner .spinner-border-sm {
@@ -101,22 +116,33 @@
     gap: 12px;
     padding: 16px;
     margin-bottom: 12px;
-    background-color: #ffffff;
-    border: 2px solid #e8eef0;
+    background-color: rgba(30, 107, 101, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     transition: all 0.3s ease;
     cursor: pointer;
 }
 
+.patient-card,
+.patient-card .patient-info,
+.patient-card .patient-info small,
+.patient-card .patient-name,
+.patient-card .status-info,
+.patient-card .waiting-time,
+.patient-card .text-muted {
+    color: #ffffff !important;
+}
+
 .patient-card:hover {
-    border-color: #1e6b65;
-    box-shadow: 0 4px 12px rgba(30, 107, 101, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(30, 107, 101, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .patient-card.selected {
-    border-color: #1e6b65;
-    background-color: #f0fffe;
-    box-shadow: 0 4px 12px rgba(30, 107, 101, 0.2);
+    border-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(30, 107, 101, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Número da fila */
@@ -135,24 +161,31 @@
 /* Informações do paciente */
 .patient-info {
     flex: 1;
+    color: #ffffff;
 }
 
 .patient-name {
     font-size: 16px;
     font-weight: 600;
-    color: #2c3e50;
+    color: #ffffff;
     word-break: break-word;
+}
+
+.patient-info small {
+    color: #ffffff;
 }
 
 .status-info {
     padding: 8px 12px;
-    background-color: #f0f4f3;
-    border-left: 3px solid #1e6b65;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-left: 3px solid rgba(255, 255, 255, 0.4);
     border-radius: 4px;
 }
 
 .waiting-time {
     font-style: italic;
+    color: #ffffff;
 }
 
 /* Botões de ação */
@@ -285,7 +318,7 @@
     }
 
     .panel-header {
-        background-color: #2a2a2a;
+        background-color: #1e6b65;
         border-color: #404040;
     }
 

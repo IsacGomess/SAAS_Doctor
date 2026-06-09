@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const userRoutes = require('./modules/users/user.routes.js');
 const patientRoutes = require('./modules/patients/patient.routes.js');
 const clinicRoutes = require('./modules/clinics/clinic.routes.js');
+const convenioRoutes = require('./modules/convenios/convenio.routes.js');
 const waitingLineRoutes = require('./modules/waiting-line/waiting-line.routes.js');
 
 const app = express();
@@ -41,6 +42,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/users', userRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/clinics', clinicRoutes);
+app.use('/api/convenios', convenioRoutes);
 app.use('/api/waiting-line', waitingLineRoutes);
 
 app.get('/api/doctor', (req, res) => {

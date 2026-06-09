@@ -45,7 +45,6 @@ class PatientService {
             belongsTo: userId,
             quickHistory: recordData.quickHistory,
             diagnosis: recordData.diagnosis,
-            vitalSigns: recordData.vitalSigns
         });
     }
 
@@ -59,7 +58,7 @@ class PatientService {
             patientId: evolutionData.patientId,
             belongsTo: userId,
             diagnosis: evolutionData.diagnosis,
-            vitalSigns: evolutionData.vitalSigns
+            evolutionText: evolutionData.evolutionText
         });
     }
 

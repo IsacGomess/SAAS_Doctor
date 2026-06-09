@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useWaitingLine } from '../services/useWaitingLine';
 import { WaitingListPanel } from '../components/WaitingListPanel';
-import { MedicalRecordPanel } from '../../medical-record/components/MedicalRecordPanel';
 import './Waiting-line.css';
 
 function WaitingLine() {
@@ -57,18 +56,22 @@ function WaitingLine() {
         <div className="header-controls">
           <button
             type="button"
-            className="btn btn-outline-secondary me-3"
+            className="btn btn-outline-secondary header-action-btn me-3"
             onClick={() => {
               auth.refreshUserInfo();
               navigate('/dashboard/patients');
             }}
           >
-            ← Voltar para Pacientes
+            ← Voltar
           </button>
-          <button type='button' className='btn btn-primary me-3 bg-green'
-                  onClick={waitingLine.fetchWaitingLine}
-                  disabled={waitingLine.isLoading} >
-                    Atualizar Fila
+          <button
+            type="button"
+            className="btn btn-primary me-3"
+            style={{ backgroundColor: '#1e6b65', borderColor: '#1e6b65' }}
+            onClick={waitingLine.fetchWaitingLine}
+            disabled={waitingLine.isLoading}
+          >
+            Atualizar Fila
           </button>
 
           {/* Seletor de Área da Clínica */}
@@ -77,7 +80,7 @@ function WaitingLine() {
             <div className="clinic-area-display">
               <span className="clinic-area-badge">{auth.clinicArea || 'Não selecionada'}</span>
               <button
-                className="btn-alter-area rounded"
+                className="btn btn-outline-light header-action-btn rounded"
                 onClick={() => setShowClinicAreaModal(true)}
               >
                 Alterar

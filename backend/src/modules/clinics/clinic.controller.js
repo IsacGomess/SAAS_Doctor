@@ -1,34 +1,18 @@
 const jwt = require('jsonwebtoken');
-const { z } = require('zod');
+const { ZodError } = require('zod');
 const ClinicService = require('./clinic.service.js');
 const UserService = require('../users/user.service.js');
-
-
-const createClinicaSchema = z.object({
-    name: z.string().min(3, 'Nome da clínica deve ter pelo menos 3 caracteres').max(120, 'Nome muito longo').trim(),
-    cnpj: z.string().trim().optional(),
-    address: z.string().trim().optional(),
-    phone: z.string().trim().optional(),
-    email: z.string().trim().email('E-mail inválido').toLowerCase().optional()
-});
+const { createClinicaSchema } = require('./clinic.validator.js');
 
 exports.createClinica = async (req, res) => {
-    if (!req.userId) {
-        return res.status(401).json({ success: false, message: 'Usuário não autenticado/User not authenticated' });
-    }
-
-    const validation = createClinicaSchema.safeParse(req.body);
-    if (!validation.success) {
-        return res.status(400).json({
-            success: false,
-            message: 'Dados inválidos para criação da clínica/Invalid clinic data',
-            errors: validation.error.flatten().fieldErrors
-        });
-    }
-
     try {
+        const validatedBody = createClinicaSchema.parse(req.body);
 
-        const clinica = await ClinicService.create(validation.data,req.userId);
+        if (!req.userId) {
+            return res.status(401).json({ success: false, message: 'Usuário não autenticado/User not authenticated' });
+        }
+
+        const clinica = await ClinicService.create(validatedBody, req.userId);
 
         const user = await UserService.associateClinicAndMakeAdmin(req.userId,clinica._id);
 
@@ -49,6 +33,14 @@ exports.createClinica = async (req, res) => {
             }
         });
     } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Dados inválidos para criação da clínica/Invalid clinic data',
+                errors: error.flatten().fieldErrors
+            });
+        }
+
         return res.status(500).json({
             message: 'Erro ao criar clínica/Error creating clinic',
             error: error.message

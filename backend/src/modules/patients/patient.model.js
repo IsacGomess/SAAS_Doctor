@@ -8,6 +8,9 @@ const patientSchema = new mongoose.Schema({
     clinicaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinica', default: null },
     // profissionalId: when patient is personal to a professional (no clinic)
     profissionalId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    // convenioId: health insurance plan, null means "Particular" (no insurance)
+    convenioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Convenio', default: null },
+    idade: { type: Number },
     isPresent:{ type: Boolean, default: false },
     observations:{ type: String },
 }, { timestamps: true });

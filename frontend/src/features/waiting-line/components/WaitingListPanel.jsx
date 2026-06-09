@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import './WaitingListPanel.css';
 import { useAuth } from '../../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import patientService from '../../patients/patientService';
 
 /**
  * Componente que exibe a lista de pacientes aguardando na fila de espera
@@ -80,40 +79,6 @@ export function WaitingListPanel({
     const openEvolutionModal = (entryId) => {
         setEvolutionText('');
         setShowEvolutionModalFor(entryId);
-    };
-
-    const submitMedicalRecord = async (entryId) => {
-        try {
-            const patientEntry = waitingList.find(e => e._id === entryId);
-            const patientId = patientEntry?.patientId?._id || patientEntry?.patientId;
-            await patientService.createMedicalRecord({
-                patientId,
-                title: medicalForm.title,
-                diagnosis: medicalForm.diagnosis,
-                plan: medicalForm.plan
-            });
-            alert('Prontuário salvo com sucesso');
-            setShowMedicalModalFor(null);
-        } catch (err) {
-            console.error(err);
-            alert('Erro ao salvar prontuário');
-        }
-    };
-
-    const submitEvolution = async (entryId) => {
-        try {
-            const patientEntry = waitingList.find(e => e._id === entryId);
-            const patientId = patientEntry?.patientId?._id || patientEntry?.patientId;
-            await patientService.createEvolution({
-                patientId,
-                notes: evolutionText
-            });
-            alert('Evolução registrada com sucesso');
-            setShowEvolutionModalFor(null);
-        } catch (err) {
-            console.error(err);
-            alert('Erro ao salvar evolução');
-        }
     };
 
     // Render de estado vazio
@@ -210,8 +175,11 @@ export function WaitingListPanel({
                                 <div className="d-flex justify-content-between align-items-start mb-2">
                                     <div>
                                         <h6 className="patient-name mb-1">{patientName}</h6>
-                                        <small className="text-muted">
+                                        <small className="text-muted d-block">
                                             {entry.clinicArea && `Área: ${entry.clinicArea}`}
+                                        </small>
+                                        <small className="text-muted d-block">
+                                            Plano: {entry.patientId?.convenioId?.nome || 'Particular'}
                                         </small>
                                     </div>
                                     <span className={`badge ${priorityBadgeClass} rounded-pill px-2 py-1`}>
@@ -298,13 +266,6 @@ export function WaitingListPanel({
                         </div>
                     );
                 })}
-            </div>
-
-            {/* Rodapé com estatísticas */}
-            <div className="panel-footer">
-                <small className="text-muted">
-                    Click em chamar para atender paciente 
-                </small>
             </div>
         </div>
     );

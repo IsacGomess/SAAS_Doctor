@@ -7,6 +7,7 @@ import ClinicaOnboarding from './features/dashboard/pages/ClinicaOnboarding';
 import './App.css';
 import { CardsDashboard } from './features/dashboard/components/CardsDashboard';
 import { Patients } from './features/dashboard/pages/Patients';
+import MedicalRecordHistory from './features/medical-record/components/MedicalRecordHistory';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
@@ -25,13 +26,11 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}>
             <Route index element={<CardsDashboard />} />
             <Route path="patients" element={<Patients />} />
+            <Route path="patients/:patientId/history" element={<MedicalRecordHistory />} />
             <Route path="clinica" element={<ClinicaOnboarding />} />
+            <Route path="waiting-line" element={<WaitingLine />} />
         </Route>
 
-        <Route 
-          path="/doctor/waiting-line" 
-          element={<PrivateRoute><WaitingLine /></PrivateRoute>} 
-        />
 
         {/* Rota padrão */}
         <Route path="*" element={<Navigate to="/login" />} />
