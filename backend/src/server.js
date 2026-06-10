@@ -9,6 +9,7 @@ const patientRoutes = require('./modules/patients/patient.routes.js');
 const clinicRoutes = require('./modules/clinics/clinic.routes.js');
 const convenioRoutes = require('./modules/convenios/convenio.routes.js');
 const waitingLineRoutes = require('./modules/waiting-line/waiting-line.routes.js');
+const appointmentRoutes = require('./modules/appointments/appointment.routes.js');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/convenios', convenioRoutes);
 app.use('/api/waiting-line', waitingLineRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 app.get('/api/doctor', (req, res) => {
     res.send('API de médicos!');

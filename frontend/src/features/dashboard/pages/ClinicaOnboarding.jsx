@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import api from '../../../services/api';
-import { addMembro, getMembros, deleteMembro } from '../../../services/clinic/membroService';
+import { addMembro, getMembros, deleteMembro } from '../../clinic/hooks/membroService';
 
 function ClinicaOnboarding() {
   const auth = useAuth();

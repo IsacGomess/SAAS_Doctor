@@ -45,7 +45,7 @@ export function SelectorsDashboard() {
                 </NavLink>
 
                 <NavLink
-                    to="agenda"
+                    to="clinic-schedule"
                     className={({ isActive }) =>
                         `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
                     }
