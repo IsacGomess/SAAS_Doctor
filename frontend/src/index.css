@@ -4,14 +4,13 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* Cores de saúde que discutimos */
-  background-color: #F8F9FA; /* Fundo branco com um toque de azul suave */    /* Texto azul marinho escuro */
 }
 
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
+  background-color: #F0F4F3
  
 }
 

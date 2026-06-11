@@ -1,0 +1,349 @@
+/* =============================================================================
+   WAITING LIST PANEL - Estilos do painel de fila de espera
+   ============================================================================= */
+
+.waiting-list-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    color: #ffffff;
+}
+
+.waiting-list-panel,
+.waiting-list-panel .panel-header,
+.waiting-list-panel .patient-card,
+.waiting-list-panel .patient-info,
+.waiting-list-panel .patient-info small,
+.waiting-list-panel .status-info,
+.waiting-list-panel .waiting-time,
+.waiting-list-panel .patient-actions .btn,
+.waiting-list-panel .empty-state {
+    color: #ffffff;
+}
+
+/* Cabeçalho do painel */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(21, 83, 80, 0.4);
+}
+
+.panel-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 18px;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.panel-header .badge {
+    font-size: 14px;
+    padding: 6px 12px;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* Estado vazio */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 250px;
+    padding: 20px;
+    text-align: center;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Spinner de carregamento */
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 20px;
+    background-color: rgba(21, 83, 80, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.loading-spinner .spinner-border-sm {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+/* Lista de pacientes */
+.patient-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.patient-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.patient-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.patient-list::-webkit-scrollbar-thumb {
+    background: #1e6b65;
+    border-radius: 10px;
+}
+
+.patient-list::-webkit-scrollbar-thumb:hover {
+    background: #155350;
+}
+
+/* Card do paciente */
+.patient-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background-color: rgba(30, 107, 101, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.patient-card,
+.patient-card .patient-info,
+.patient-card .patient-info small,
+.patient-card .patient-name,
+.patient-card .status-info,
+.patient-card .waiting-time,
+.patient-card .text-muted {
+    color: #ffffff !important;
+}
+
+.patient-card:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(30, 107, 101, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.patient-card.selected {
+    border-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(30, 107, 101, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Número da fila */
+.queue-number {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.queue-number .badge {
+    font-size: 16px;
+    padding: 8px 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Informações do paciente */
+.patient-info {
+    flex: 1;
+    color: #ffffff;
+}
+
+.patient-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    word-break: break-word;
+}
+
+.patient-info small {
+    color: #ffffff;
+}
+
+.status-info {
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-left: 3px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+}
+
+.waiting-time {
+    font-style: italic;
+    color: #ffffff;
+}
+
+/* Botões de ação */
+.patient-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.patient-actions .btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.patient-actions .btn-outline-primary {
+    color: #1e6b65;
+    border-color: #1e6b65;
+}
+
+.patient-actions .btn-outline-primary:hover {
+    background-color: #1e6b65;
+    border-color: #1e6b65;
+    color: white;
+}
+
+.patient-actions .btn-primary {
+    background-color: #1e6b65;
+    border-color: #1e6b65;
+}
+
+.patient-actions .btn-primary:hover {
+    background-color: #155350;
+    border-color: #155350;
+}
+
+.patient-actions .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Compact mode: reduce visual size dramatically (~80% smaller) for dense display */
+.compact-column .waiting-list-panel {
+    border-radius: 6px;
+}
+
+.compact-column .panel-header {
+    padding: 8px 10px;
+}
+
+.compact-column .panel-title {
+    font-size: 12px;
+}
+
+.compact-column .patient-list {
+    padding: 6px;
+}
+
+.compact-column .patient-card {
+    padding: 6px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    gap: 6px;
+}
+
+.compact-column .queue-number .badge {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.compact-column .patient-name {
+    font-size: 12px;
+}
+
+.compact-column .patient-actions {
+    gap: 6px;
+}
+
+.btn-compact {
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+/* Rodapé do painel */
+.panel-footer {
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .panel-header {
+        padding: 16px;
+    }
+
+    .panel-title {
+        font-size: 16px;
+    }
+
+    .patient-card {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    .patient-name {
+        font-size: 14px;
+    }
+
+    .patient-actions {
+        flex-direction: column;
+    }
+
+    .patient-actions .btn {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Dark mode (se implementado) */
+@media (prefers-color-scheme: dark) {
+    .waiting-list-panel {
+        background-color:#f0f4f3;
+    }
+
+    .panel-header {
+        background-color: #1e6b65;
+        border-color: #404040;
+    }
+
+    .panel-title {
+        color: #e0e0e0;
+    }
+
+    .patient-card {
+        background-color: #2a2a2a;
+        border-color: #404040;
+    }
+
+    .patient-card:hover {
+        border-color: #4db8b3;
+    }
+
+    .patient-name {
+        color: #e0e0e0;
+    }
+
+    .status-info {
+        background-color: #1a3a37;
+    }
+
+    .patient-list {
+        background-color: #1e1e1e;
+    }
+}

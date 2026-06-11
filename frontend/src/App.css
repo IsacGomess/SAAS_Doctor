@@ -36,6 +36,13 @@
     font-size: 50px !important;
     color: #1E6B65 !important  ;
 }
+/* world in the selectors dashboard */
 .med{
     font-size: 50px !important;
+}
+
+/*class for btn in selectors dashboard */
+.activo{
+    background-color: #1E6B65 !important;
+    color: #FFFFFF !important;
 }
