@@ -119,17 +119,13 @@ export const Patients = () => {
   };
 
   const handleAddToWaitingLine = async (paciente) => {
-    if (!auth.userId) {
-      alert('Você precisa estar autenticado para adicionar pacientes à fila.');
-      return;
-    }
-
     try {
       setAddingPatientId(paciente._id);
-      // Verifica se já existe entrada do mesmo paciente no mesmo dia
+      
+      // 1. Verifica se já existe entrada do mesmo paciente no mesmo dia
       try {
         const listResp = await getWaitingLine({ clinicArea: auth.clinicArea });
-        const todays = (listResp.waitingLine || []).filter(entry => {
+        const todays = (listResp.waitingLine || listResp || []).filter(entry => {
           const pid = entry.patientId && (entry.patientId._id || entry.patientId);
           if (!pid) return false;
           if (pid.toString() !== paciente._id.toString()) return false;
@@ -145,16 +141,20 @@ export const Patients = () => {
           return;
         }
       } catch (err) {
-        // Se falhar a verificação, seguir com criação (backend deve proteger também)
         console.warn('Falha ao verificar duplicatas na fila:', err);
       }
-      const payload = {
-        patientId: paciente._id,
-        assignedTo: auth.userId,
-        clinicArea: auth.clinicArea || undefined,
-        source: 'avulso'
-      };
 
+      // 2. Monta o Payload Limpo (Deixando o backend identificar o médico pelo Cookie)
+      // 🚀 Atualize APENAS o bloco do payload no seu Patients.jsx:
+    const payload = {
+      patientId: paciente._id,
+      clinicaId: auth.clinicaId || localStorage.getItem('clinicaId'), 
+      clinicArea: auth.clinicArea || localStorage.getItem('clinicArea') || undefined, // 💡 Força pegar o que estiver salvo
+      assignedTo: auth.userId || undefined, // Se o seu back exigir o ID do médico no corpo da requisição
+      source: 'avulso'
+    };
+
+      // 3. Faz o disparo usando o serviço que já consome nossa instância com cookies
       await createWaitingLineEntry(payload);
       alert(`Paciente ${paciente.name} adicionado à fila de espera.`);
     } catch (error) {

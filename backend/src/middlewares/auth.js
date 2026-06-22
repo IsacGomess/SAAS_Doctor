@@ -1,33 +1,47 @@
 const jwt = require('jsonwebtoken');
 
 exports.authenticateToken = (req, res, next) => {
-    const authHeader = req.headers.authorization; // Espera o token no formato "Bearer
+    let token = null;
 
-    if(!authHeader) {
-        console.warn('[AUTH] Authorization header missing for', req.originalUrl);
-        return res.status(401).json({ message: 'Token de autenticação não fornecido/Authentication token not provided' });
-    }
-
-    const parts = authHeader.split(' '); // Divide o header em partes, esperando "Bearer" e o token
-    if(parts.length !== 2){
-        console.warn('[AUTH] Authorization header malformed (parts !== 2)', authHeader);
-        return res.status(401).json({ message: 'Token de autenticação inválido/Invalid authentication token' });
-    }
-    const [scheme,token] = parts;
-
-    if(!/^Bearer$/i.test(scheme)){
-        console.warn('[AUTH] Authorization scheme not Bearer:', scheme);
-        return res.status(401).json({ message: 'Token de autenticação mal formatado/Malformed authentication token' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if(err){
-            console.warn('[AUTH] JWT verification failed:', err && err.message);
-            return res.status(401).json({ message: 'Token de autenticação inválido/Invalid authentication token' });
+    // 1. TENTA PEGAR O TOKEN DO COOKIE PRIMEIRO (Fluxo Novo e Seguro)
+    if (req.cookies && req.cookies.accessToken) {
+        token = req.cookies.accessToken;
+    } 
+    // 2. PLANO B: Se não estiver no cookie, tenta ler do Header Authorization antigo
+    else if (req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        const parts = authHeader.split(' ');
+        
+        if (parts.length === 2) {
+            const [scheme, credentials] = parts;
+            if (/^Bearer$/i.test(scheme)) {
+                token = credentials;
+            }
         }
+    }
+
+    // 3. SE NÃO ACHOU O TOKEN EM LUGAR NENHUM, BARRA A REQUISIÇÃO
+    if (!token) {
+        console.warn('[AUTH] Token de autenticação ausente para:', req.originalUrl);
+        return res.status(401).json({ 
+            message: 'Token de autenticação não fornecido/Authentication token not provided' 
+        });
+    }
+
+    // 4. VALIDAÇÃO DO JWT
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            console.warn('[AUTH] Falha na verificação do JWT:', err.message);
+            return res.status(401).json({ 
+                message: 'Token de autenticação inválido ou expirado/Invalid or expired authentication token' 
+            });
+        }
+        
+        // Mantém exatamente as mesmas propriedades para não quebrar nenhum controller do seu app!
         req.userId = decoded.userId;
         req.clinicaId = decoded.clinicaId || null;
         req.user = decoded;
-        next();
+        
+        next(); // Libera o acesso para buscar os pacientes, filas, etc.!
     });
 };

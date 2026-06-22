@@ -31,6 +31,12 @@ export const createWaitingLineEntry = async (data) => {
  * @param {string} filters.clinicArea - Área da clínica
  * @returns {Promise<Object>} Retorna objeto com waitingLine array
  */
+// ============================================================================
+// LISTAR FILA DE ESPERA COM FILTROS
+// ============================================================================
+// ============================================================================
+// LISTAR FILA DE ESPERA COM FILTROS
+// ============================================================================
 export const getWaitingLine = async (filters = {}) => {
     try {
         const queryParams = new URLSearchParams();
@@ -41,15 +47,26 @@ export const getWaitingLine = async (filters = {}) => {
         if (filters.clinicArea) queryParams.append('clinicArea', filters.clinicArea);
 
         const query = queryParams.toString();
+        
+        // 💡 FORÇADO: Mantemos o /list porque o seu backend NÃO aceita a rota raiz!
         const url = query ? `${WAITING_LINE_BASE_URL}/list?${query}` : `${WAITING_LINE_BASE_URL}/list`;
         
         const response = await api.get(url);
-        return response.data;
+        
+        // Retorna os dados se vierem direto ou envelopados em um objeto
+        return response.data?.waitingLine || response.data?.patients || response.data || [];
     } catch (error) {
-        throw error.response?.data || { message: 'Erro ao listar fila de espera' };
+        // 🔒 BLINDAGEM CONTRA FILA VAZIA: 
+        // Se o backend responder com erro, mas for apenas o aviso de que não há ninguém na fila (count: 0)
+        const errorData = error.response?.data || error;
+        
+        if (errorData.count === 0 || errorData.success === true || errorData.message?.includes("Nenhuma entrada")) {
+            return []; // Devolve um array vazio limpo para o React renderizar a tela vazia sem quebrar!
+        }
+        
+        throw errorData || { message: 'Erro ao listar fila de espera' };
     }
 };
-
 // ============================================================================
 // OBTER ENTRADA ESPECÍFICA DA FILA
 // ============================================================================

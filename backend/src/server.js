@@ -1,7 +1,35 @@
-require('dotenv').config();
+require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env para process.env
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); 
 const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+
+// 1. PRIMEIRO INSTANCIA O APP
+const app = express(); 
+
+// 2. CONFIGURAÇÃO DO CORS (DEVE SER O PRIMEIRO MIDDLEWARE ATIVO!)
+app.use(cors({
+    origin: 'http://localhost:5173', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'], 
+    credentials: true 
+}));
+
+// 3. INTERPRETADORES DE REQUISIÇÃO (Dados e Cookies)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); 
+
+// 4. LOGGER DE REQUISIÇÕES (Agora ele roda com segurança após o CORS aprovar a chamada)
+app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.originalUrl} - Headers:`, {
+        origin: req.headers.origin,
+        cookie_accessToken: req.cookies?.accessToken ? 'present' : 'missing', 
+        authorization: req.headers.authorization ? 'present' : 'missing',
+        'content-type': req.headers['content-type']
+    });
+    next();
+});
 
 // IMPORTAR ROTAS DOS MÓDULOS
 const userRoutes = require('./modules/users/user.routes.js');
@@ -10,36 +38,15 @@ const clinicRoutes = require('./modules/clinics/clinic.routes.js');
 const convenioRoutes = require('./modules/convenios/convenio.routes.js');
 const waitingLineRoutes = require('./modules/waiting-line/waiting-line.routes.js');
 const appointmentRoutes = require('./modules/appointments/appointment.routes.js');
-
-const app = express();
-
-// Simple request logger to aid debugging
-app.use((req, res, next) => {
-    console.log(`[REQ] ${req.method} ${req.originalUrl} - Headers:`, {
-        origin: req.headers.origin,
-        authorization: req.headers.authorization ? 'present' : 'missing',
-        'content-type': req.headers['content-type']
-    });
-    next();
-});
-
-app.use(cors({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 const PORT = process.env.PORT || 3000;
 
-mongoose.connection.on('error', (err) => console.error('Erro de conexão com o MongoDB:', err));
+mongoose.connection.on('error', (err) => console.error('Erro de conexão com o MongoDB:', err)); // Adiciona um listener para erros de conexão do MongoDB
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Conectado ao MongoDB'))
     .catch((err) => console.error('Erro ao conectar ao MongoDB:', err));
 
-// ✅ USAR AS ROTAS DOS MÓDULOS
+// ✅ USAR AS ROTAS DOS MÓDULOS (Continuam intocadas e protegidas!)
 app.use('/api/users', userRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/clinics', clinicRoutes);
@@ -49,7 +56,6 @@ app.use('/api/appointments', appointmentRoutes);
 
 app.get('/api/doctor', (req, res) => {
     res.send('API de médicos!');
-
 });
 
 app.listen(PORT, () => {
