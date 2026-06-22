@@ -7,6 +7,8 @@ const limiter  = require('../../middlewares/rate-limit.js');
 // Rotas públicas (sem autenticação)
 routes.post('/register',limiter.authLimiter,  userController.register);
 routes.post('/login',limiter.authLimiter, userController.login);
+routes.post('/refresh', userController.refresh); 
+routes.post('/logout', userController.logout);
 
 // Middleware de autenticação para as rotas seguintes
 routes.use(authMiddleware.authenticateToken);

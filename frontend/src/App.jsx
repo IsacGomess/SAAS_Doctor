@@ -12,9 +12,10 @@ import ClinicSchedule from './features/clinic/pages/clinicSchedule';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
-}
+  const userName = localStorage.getItem('userName');
+  if (!userName) return <Navigate to="/login" replace />;
+  return children;
+} 
 
 function App() {
   return (

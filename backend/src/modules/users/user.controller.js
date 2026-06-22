@@ -4,6 +4,54 @@ const User = require('./user.model.js');
 const bcrypt = require('bcrypt');
 const { registerSchema, loginSchema, addMembroSchema, membroIdParamSchema } = require('./user.validator.js');
 
+
+exports.refresh = async (req, res) => {
+    try {
+        // Pega o refresh token guardado de forma segura no cookie
+        const refreshToken = req.cookies ? req.cookies.refreshToken : null;
+
+        if (!refreshToken) {
+            return res.status(401).json({ message: 'Refresh token não fornecido' });
+        }
+
+        // Valida o refresh token usando a chave de segurança de refresh
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
+            if (err) {
+                return res.status(403).json({ message: 'Refresh token inválido ou expirado' });
+            }
+
+            // Se o refresh for válido, gera um NOVO accessToken
+            const newAccessToken = jwt.sign(
+                { userId: decoded.userId, name: decoded.name, clinicaId: decoded.clinicaId || null },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+
+            const isProd = process.env.NODE_ENV === 'production';
+
+            // Salva o novo access token no cookie novamente
+            res.cookie('accessToken', newAccessToken, {
+                httpOnly: true,
+                secure: isProd,
+                sameSite: isProd ? 'lax' : 'none',
+                maxAge: 60 * 60 * 1000 // 1 hora
+            });
+
+            return res.status(200).json({ success: true, message: 'Token renovado' });
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Erro ao renovar token', error: error.message });
+    }
+};
+exports.logout = async (req, res) => {
+    const isProd = process.env.NODE_ENV === 'production';
+    
+    // Limpa ambos os cookies setando o maxAge para zero
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'lax' : 'none' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'lax' : 'none' });
+
+    return res.status(200).json({ success: true, message: 'Deslogado com sucesso' });
+};
 exports.register = async (req, res) => {
     try {
         const { name, email, password, registroProf } = registerSchema.parse(req.body);
@@ -51,9 +99,9 @@ exports.login = async (req, res) => {
         }
 
         const accessToken = jwt.sign(
-            { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+        { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
         );
         const refreshToken = jwt.sign(
             { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
@@ -61,11 +109,28 @@ exports.login = async (req, res) => {
             { expiresIn: '7d' }
         );
 
+        const isProd = process.env.NODE_ENV === 'production';
+
+        // 🔒 Configura o Cookie do Access Token
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? 'lax' : 'none',
+            maxAge: 60 * 60 * 1000 // 1 hora
+        });
+
+        // 🔒 Configura o Cookie do Refresh Token
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? 'lax' : 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+        });
+
+        // O JSON agora só envia os dados públicos do usuário! Nada de tokens expostos.
         return res.status(200).json({
             success: true,
             message: 'Login bem-sucedido/Login successful',
-            accessToken,
-            refreshToken,
             user: { name: user.name, clinicaId: user.clinicaId || null }
         });
     } catch (error) {

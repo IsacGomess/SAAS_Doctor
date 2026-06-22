@@ -407,7 +407,4 @@ DoctorDashboard
 
 ---
 
-**Diagrama criado:** 23 de Maio de 2026
-**Versão:** 1.0 - Implementação Completa
-**Status:** ✅ Pronto para Produção
 

@@ -11,24 +11,40 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try { 
-        const response = await api.post('/api/users/login', { email, password});
+        const response = await api.post('/api/users/login', { email, password });
         
-        if(response.data.accessToken){
-                localStorage.setItem('token', response.data.accessToken); // Armazena o token de acesso no localStorage
-                localStorage.setItem('userName', response.data.user.name); // Armazena o nome do usuário no localStorage
-                if (response.data.user.clinicaId) {
-                    localStorage.setItem('clinicaId', response.data.user.clinicaId);
-                } else {
-                    localStorage.removeItem('clinicaId');
-                }
+        console.log("[AUTH] Resposta do backend no Login:", response.data);
+
+        // 💡 ALTERAÇÃO AQUI: Verificamos se o objeto 'user' ou os dados vieram (independente de ter a propriedade .success)
+        if (response.data && (response.data.user || response.data.name)) {
+            localStorage.removeItem('token'); // 🔒 Remove o token antigo por segurança
+            
+            // Pega o nome do usuário de onde ele estiver no JSON
+            const nomeUsuario = response.data.user?.name || response.data.name;
+            localStorage.setItem('userName', nomeUsuario); 
+            
+            // Pega o clinicaId de onde ele estiver no JSON
+            const idClinica = response.data.user?.clinicaId || response.data.clinicaId;
+
+            if (idClinica) {
+                localStorage.setItem('clinicaId', idClinica);
+                console.log("[AUTH] 'clinicaId' gravado com sucesso no LocalStorage:", idClinica);
+            } else {
+                console.warn("[AUTH] O backend não enviou 'clinicaId' para este usuário.");
+                localStorage.removeItem('clinicaId');
             }
-        alert("Sucesso, Bem vindo !!");
-        navigate("/dashboard"); // Redireciona para a página de dashboard após o login bem-sucedido
+
+            alert("Sucesso, Bem vindo !!");
+            navigate("/dashboard"); // 🚀 Redireciona o usuário para dentro do sistema
+        } else {
+            alert("Erro na estrutura de resposta do servidor.");
+        }
+
     } catch (error) {
-      
-        alert("Erro de usuario ou senha ao logar:");
-    }  
-  };
+        console.error("[AUTH] Erro ao tentar logar:", error);
+        alert("Erro de usuário ou senha ao logar.");
+    }
+};
     return (
           <div className="login-page-wrapper">
             <div

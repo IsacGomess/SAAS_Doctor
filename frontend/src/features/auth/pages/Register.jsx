@@ -12,18 +12,19 @@ function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.post('/api/users/register', { name, email, password, registroProf });
+            // Envia os dados para a rota do backend
+            await api.post('/api/users/register', { name, email, password, registroProf });
 
-            if(response.data.token){
-                localStorage.setItem('token', response.data.token);
-            }
+            // 🔒 Como o backend não envia token no registro, removemos o bloco "if(response.data.token)" antigo daqui.
+            localStorage.removeItem('token'); // Garante que não há lixo eletrônico de logins antigos
+
             alert("Médico registrado com sucesso!!");
-            navigate("/login"); // Redireciona para a página de login após o registro bem-sucedido
+            navigate("/login"); 
         } catch (error) {
             const mensagem = error.response?.data?.message || "Erro no servidor";
             console.error("Erro completo:", error.response?.data); 
             alert("Erro ao registrar médico: " + mensagem);
-           }
+        }
     };
 
     return ( 

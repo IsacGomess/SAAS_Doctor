@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
+
 export function NavBar({userName}) {
+    const { logout } = useAuth();
     const navigate = useNavigate(); 
     return (
         <nav className="navbar"
@@ -10,7 +13,9 @@ export function NavBar({userName}) {
                     </span>
                 <button
                     className="btn btn-outline-dark btn-sm bg-white text-dark rounded-3 "
-                    onClick={() => navigate('/login')}>
+                    onClick={() => {
+                        logout();
+                    }}>
                       <i className="bi bi-arrow-bar-right"></i>Sair
                 </button>
             </div>

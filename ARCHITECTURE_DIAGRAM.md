@@ -1,48 +1,6 @@
 # 🏗️ DIAGRAMA DE ARQUITETURA - Antes e Depois
 
-## Estrutura Vertical (Atual)
 
-```
-backend/
-│
-├── controllers/          ← Lógica de aplicação
-│   ├── user.js
-│   ├── patient.js
-│   ├── clinica.js
-│   └── waiting-line.js
-│
-├── models/              ← Camada de dados
-│   ├── index.js         ← Arquivo central de exports
-│   ├── user.js
-│   ├── patient.js
-│   ├── medicalRecord.js
-│   ├── evolution.js
-│   ├── prescription.js
-│   ├── clinica.js
-│   └── flow-clinic/
-│       └── waiting-line.js
-│
-├── routes/              ← Definições de endpoints
-│   ├── user.js          ← Contém AMBAS: users + patients
-│   ├── clinicas.js
-│   └── waiting-line.js
-│
-├── middlewares/         ← Middleware (auth, rate-limit)
-│   ├── auth.js
-│   └── rate-limit.js
-│
-├── server.js            ← Arquivo de entrada
-└── package.json
-```
-
-### ❌ Problemas desta Arquitetura
-
-- **Falta de coesão:** Pacientes estão nas rotas de usuários
-- **Difícil navegação:** Precisa saltar entre pastas para entender um domínio
-- **Escalabilidade limitada:** Novos módulos começam descentralizados
-- **Responsabilidade pouco clara:** Não é óbvio o que cada pasta faz
-
----
 
 ## DEPOIS: Estrutura Horizontal por Módulos (Nova)
 
@@ -366,18 +324,3 @@ app.use('/api/appointments', appointmentRoutes);
 
 ---
 
-## ✅ Validação de Arquitetura
-
-Após a refatoração, verifique:
-
-- [ ] Cada módulo tem sua pasta em `src/modules/`
-- [ ] Cada módulo segue: `[domínio].model.js`, `[domínio].controller.js`, `[domínio].routes.js`
-- [ ] Todos os imports são relativos à pasta do módulo
-- [ ] Middlewares globais estão em `src/middlewares/`
-- [ ] `src/server.js` importa corretamente todos os módulos
-- [ ] Nenhuma lógica de negócio foi alterada
-- [ ] Todas as rotas funcionam e retornam mesmos dados
-- [ ] Autenticação continua funcionando
-- [ ] Rate limiting continua funcionando
-
-Se tudo acima está marcado ✅, sua refatoração foi um sucesso! 🎉

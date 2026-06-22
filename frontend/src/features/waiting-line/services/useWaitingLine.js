@@ -39,6 +39,9 @@ export const useWaitingLine = (options = {}) => {
     // =========================================================================
     // FETCH - Busca a fila de espera
     // =========================================================================
+    // =========================================================================
+// FETCH - Busca a fila de espera
+// =========================================================================
     const fetchWaitingLine = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -51,7 +54,14 @@ export const useWaitingLine = (options = {}) => {
 
             const response = await getWaitingLine(filters);
             
-            if (response.success && response.waitingLine) {
+            // 💡 CORREÇÃO CIRÚRGICA:
+            // Se a resposta já for um Array puro, usa ela direto.
+            // Se for um objeto com a propriedade .waitingLine, extrai dela.
+            if (Array.isArray(response)) {
+                setWaitingList(response);
+            } else if (response && Array.isArray(response.waitingLine)) {
+                setWaitingList(response.waitingLine);
+            } else if (response && response.success && response.waitingLine) {
                 setWaitingList(response.waitingLine);
             } else {
                 setWaitingList([]);

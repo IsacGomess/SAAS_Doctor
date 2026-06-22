@@ -1,22 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    getUserIdFromToken, 
-    getUserNameFromToken, 
-    getUserClinicIdFromToken,
-    getClinicAreaFromStorage, 
-    setClinicAreaInStorage,
-    isTokenExpired,
-    getUserInfoFromToken
-} from '../utils/jwtUtils';
+import api from '../services/api'; 
 
 /**
  * Hook personalizado para gerenciar estado de autenticação
- * Centraliza acesso às informações do usuário logado
- * 
- * @returns {Object} Objeto com informações do usuário e métodos
+ * Centraliza acesso às informações do usuário logado usando Cookies e LocalStorage cosmético
  */
 export const useAuth = () => {
-    const [userId, setUserId] = useState(null);
+    // 💡 Buscamos o ID do usuário de forma cosmética se necessário, ou podemos usar o ID da clínica
+    const [userId, setUserId] = useState(null); 
     const [userName, setUserName] = useState(null);
     const [clinicArea, setClinicArea] = useState(null);
     const [clinicaId, setClinicaId] = useState(null);
@@ -27,28 +18,23 @@ export const useAuth = () => {
     useEffect(() => {
         const initializeAuth = () => {
             try {
-                // Verifica se token está armazenado
-                const token = localStorage.getItem('token');
-                
-                if (!token || isTokenExpired()) {
+                // 🚀 MUDANÇA REAL: Lemos direto do LocalStorage os dados salvos no Login
+                const storedName = localStorage.getItem('userName');
+                const storedClinicId = localStorage.getItem('clinicaId');
+                const storedArea = localStorage.getItem('clinicArea');
+
+                if (!storedName) {
                     setIsAuthenticated(false);
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('userName');
                     setIsLoading(false);
                     return;
                 }
 
-                // Extrai informações do token
-                const id = getUserIdFromToken();
-                const name = getUserNameFromToken();
-                const clinicId = getUserClinicIdFromToken();
-                const area = getClinicAreaFromStorage();
-
-                setUserId(id);
-                setUserName(name);
-                setClinicaId(clinicId);
-                setClinicArea(area);
-                setIsAuthenticated(!!id);
+                setUserName(storedName);
+                setClinicaId(storedClinicId);
+                setClinicArea(storedArea);
+                
+                // Como o cookie já está injetado pelo back, o front assume a autenticação
+                setIsAuthenticated(true); 
             } catch (error) {
                 console.error('Erro ao inicializar autenticação:', error);
                 setIsAuthenticated(false);
@@ -63,39 +49,47 @@ export const useAuth = () => {
     // Função para definir a área da clínica
     const setDoctorClinicArea = useCallback((area) => {
         if (area) {
-            setClinicAreaInStorage(area);
+            localStorage.setItem('clinicArea', area); // Salva direto no storage sem jwtUtils
             setClinicArea(area);
         }
     }, []);
 
-    // Função para logout
-    const logout = useCallback(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('clinicArea');
-        localStorage.removeItem('clinicaId');
-        setUserId(null);
-        setUserName(null);
-        setClinicArea(null);
-        setClinicaId(null);
-        setIsAuthenticated(false);
+    // Função de logout (Avisa o backend para limpar os cookies)
+    const logout = useCallback(async () => {
+        try {
+            await api.post('/api/users/logout'); 
+        } catch (error) {
+            console.error('Erro ao limpar cookies no servidor durante o logout:', error);
+        } finally {
+            // Limpa o lixo eletrônico do localStorage
+            localStorage.removeItem('token'); 
+            localStorage.removeItem('userName');
+            localStorage.removeItem('clinicArea');
+            localStorage.removeItem('clinicaId');
+            
+            // Reseta estados do React
+            setUserId(null);
+            setUserName(null);
+            setClinicArea(null);
+            setClinicaId(null);
+            setIsAuthenticated(false);
+            
+            window.location.href = '/login';
+        }
     }, []);
 
-    // Função para atualizar informações do usuário
+    // Função para atualizar informações do usuário de forma reativa
     const refreshUserInfo = useCallback(() => {
-        const id = getUserIdFromToken();
-        const name = getUserNameFromToken();
-        const clinicId = getUserClinicIdFromToken();
-        const area = getClinicAreaFromStorage();
+        const storedName = localStorage.getItem('userName');
+        const storedClinicId = localStorage.getItem('clinicaId');
+        const storedArea = localStorage.getItem('clinicArea');
 
-        setUserId(id);
-        setUserName(name);
-        setClinicaId(clinicId);
-        setClinicArea(area);
-        setIsAuthenticated(!!id);
+        setUserName(storedName);
+        setClinicaId(storedClinicId);
+        setClinicArea(storedArea);
+        setIsAuthenticated(!!storedName);
     }, []);
 
-    // Função para obter todas as informações do usuário
     const getUserFullInfo = useCallback(() => {
         return {
             userId,
@@ -103,20 +97,17 @@ export const useAuth = () => {
             clinicArea,
             clinicaId,
             isAuthenticated,
-            fullInfo: getUserInfoFromToken()
+            fullInfo: { name: userName, clinicaId } 
         };
     }, [userId, userName, clinicArea, clinicaId, isAuthenticated]);
 
     return {
-        // Estado
         userId,
         userName,
         clinicaId,
         clinicArea,
         isAuthenticated,
         isLoading,
-
-        // Métodos
         setDoctorClinicArea,
         logout,
         refreshUserInfo,
