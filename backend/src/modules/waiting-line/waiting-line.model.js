@@ -35,6 +35,7 @@ const waitingLineSchema = new mongoose.Schema({
     observations: { type: String },
 }, { timestamps: true });
 
+waitingLineSchema.index({ clinicaId: 1, status: 1, checkInAt: 1 });
 const WaitingLine = mongoose.models.WaitingLine || mongoose.model('WaitingLine', waitingLineSchema, 'waiting_lines');
 
 module.exports = WaitingLine;

@@ -1,8 +1,8 @@
 require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env para process.env
 const express = require('express');
-const cors = require('cors'); 
+const cors = require('cors'); // Importa o middleware CORS para permitir requisições de diferentes origens
 const mongoose = require('mongoose');
-const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser'); // Importa o middleware cookie-parser para lidar com cookies nas requisições
 
 // 1. PRIMEIRO INSTANCIA O APP
 const app = express(); 
@@ -16,9 +16,9 @@ app.use(cors({
 }));
 
 // 3. INTERPRETADORES DE REQUISIÇÃO (Dados e Cookies)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); 
+app.use(express.json()); // Permite que o Express interprete requisições com corpo em JSON
+app.use(express.urlencoded({ extended: true })); // Permite que o Express interprete requisições com corpo em URL-encoded
+app.use(cookieParser()); // Permite que o Express interprete cookies nas requisições
 
 // 4. LOGGER DE REQUISIÇÕES (Agora ele roda com segurança após o CORS aprovar a chamada)
 app.use((req, res, next) => {

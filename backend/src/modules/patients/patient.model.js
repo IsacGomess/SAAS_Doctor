@@ -15,6 +15,8 @@ const patientSchema = new mongoose.Schema({
     observations:{ type: String },
 }, { timestamps: true });
 
+patientSchema.index({ clinicaId: 1, createdAt: 1 });
+
 const Patient = mongoose.model('Patient',patientSchema,'patients');
 
 module.exports = Patient;
