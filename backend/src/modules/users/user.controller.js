@@ -33,7 +33,7 @@ exports.refresh = async (req, res) => {
             res.cookie('accessToken', newAccessToken, {
                 httpOnly: true,
                 secure: isProd,
-                sameSite: isProd ? 'lax' : 'none',
+                sameSite:'lax',
                 maxAge: 60 * 60 * 1000 // 1 hora
             });
 
@@ -73,13 +73,13 @@ exports.register = async (req, res) => {
         if (error instanceof ZodError) {
             return res.status(400).json({
                 success: false,
-                message: 'Dados inválidos enviados para o cadastro',
+                message: 'Dados inválidos enviados para o cadastro/ a senha precisa ter letra Maiuscula, letra minúscula, número e no mínimo 8 caracteres/Invalid data sent for registration',
                 errors: error.flatten().fieldErrors
             });
         }
 
         console.error('erro no terminal => ', error);
-        return res.status(500).json({ message: 'Erro ao registrar médico/Error registering doctor', error: error.message });
+        return res.status(500).json({ message: 'Erro ao registrar usuario/Error registering user', error: error.message });
     }
 };
 
@@ -90,12 +90,12 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) {
             console.log('User not found for email:');
-            return res.status(400).json({ message: 'Usuário não encontrado/User not found' });
+            return res.status(400).json({ message: 'Usuário não encontrado ou senha incorreta/User not found or incorrect password' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Senha incorreta/Incorrect password' });
+            return res.status(400).json({ message: 'Usuário não encontrado ou senha incorreta/User not found or incorrect password' });
         }
 
         const accessToken = jwt.sign(
@@ -115,7 +115,7 @@ exports.login = async (req, res) => {
         res.cookie('accessToken', accessToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'lax' : 'none',
+            sameSite:'lax',
             maxAge: 60 * 60 * 1000 // 1 hora
         });
 
@@ -123,11 +123,11 @@ exports.login = async (req, res) => {
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? 'lax' : 'none',
+            sameSite:'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
         });
 
-        // O JSON agora só envia os dados públicos do usuário! Nada de tokens expostos.
+        // O JSON agora só envia os dados públicos do usuário!
         return res.status(200).json({
             success: true,
             message: 'Login bem-sucedido/Login successful',

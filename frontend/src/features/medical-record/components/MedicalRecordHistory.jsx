@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   getPatientAttendanceList,
@@ -44,6 +44,9 @@ const MedicalRecordHistory = () => {
 
   // 💡 ESTADO CENTRAL DE IMPRESSÃO
   const [printData, setPrintData] = useState(null);
+  const evolutionFormRef = useRef(null);
+  const medicalRecordFormRef = useRef(null);
+  const prescriptionFormRef = useRef(null);
 
   // Estados dos formulários
   const [evolutionForm, setEvolutionForm] = useState({ diagnosis: '', evolutionText: '' });
@@ -161,6 +164,60 @@ const MedicalRecordHistory = () => {
     }, 150);
   };
 
+  const scrollToForm = (formRef) => {
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
+
+  const handleCopyEvolution = (item) => {
+    setActiveTab('evolution');
+    setEvolutionForm({
+      diagnosis: item.diagnosis?.description || '',
+      evolutionText: item.evolutionText || ''
+    });
+    setSelectedEvolutionId(null);
+    scrollToForm(evolutionFormRef);
+  };
+
+  const handleCopyMedicalRecord = (item) => {
+    const quickHistory = (item.quickHistory || []).map((entry) => ({
+      comorbidities: entry.comorbidities || '',
+      diesease: entry.diesease || '',
+      observation: entry.observation || ''
+    }));
+
+    setActiveTab('medicalRecord');
+    setMedicalRecordForm({
+      diagnosis: item.diagnosis?.description || '',
+      quickHistory: quickHistory.length > 0
+        ? quickHistory
+        : [{ comorbidities: '', diesease: '', observation: '' }]
+    });
+    setSelectedMedicalRecordId(null);
+    scrollToForm(medicalRecordFormRef);
+  };
+
+  const handleCopyPrescription = (item) => {
+    const medications = (item.medications || []).map((medicine) => ({
+      name: medicine.name || '',
+      dosage: medicine.dosage || '',
+      frequency: medicine.frequency || '',
+      duration: medicine.duration || ''
+    }));
+
+    setActiveTab('prescription');
+    setPrescriptionForm({
+      diagnosis: item.diagnosis?.description || '',
+      medications: medications.length > 0
+        ? medications
+        : [{ name: '', dosage: '', frequency: '', duration: '' }],
+      observations: item.observations || ''
+    });
+    setSelectedPrescriptionId(null);
+    scrollToForm(prescriptionFormRef);
+  };
+
   // =========================================================================
   // 💡 TEMPLATE OFICIAL PADRONIZADO (SÓ APARECE NO PAPEL)
   // =========================================================================
@@ -259,8 +316,8 @@ const MedicalRecordHistory = () => {
   const renderEvolutionContent = () => {
     return (
       <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3">
+        <div className="col-12">
+          <div ref={evolutionFormRef} className="card border-0 shadow-sm rounded-3 h-100">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Registrar Nova Evolução</h5>
               <form onSubmit={handleSubmitEvolution}>
@@ -269,6 +326,7 @@ const MedicalRecordHistory = () => {
                   <textarea
                     className="form-control"
                     rows="3"
+                    style={{ minHeight: '96px', resize: 'vertical' }}
                     value={evolutionForm.diagnosis}
                     onChange={(e) => setEvolutionForm({ ...evolutionForm, diagnosis: e.target.value })}
                     placeholder="Descrição do diagnóstico"
@@ -279,7 +337,8 @@ const MedicalRecordHistory = () => {
                   <label className="form-label text-muted small fw-bold">Evolução</label>
                   <textarea
                     className="form-control"
-                    rows="4"
+                    rows="12"
+                    style={{ minHeight: '320px', resize: 'vertical' }}
                     value={evolutionForm.evolutionText}
                     onChange={(e) => setEvolutionForm({ ...evolutionForm, evolutionText: e.target.value })}
                     placeholder="Evolução Clínica"
@@ -294,7 +353,7 @@ const MedicalRecordHistory = () => {
           </div>
         </div>
 
-        <div className="col-12 col-lg-6">
+        <div className="col-12">
           <div className="card border-0 shadow-sm rounded-3">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Histórico de Evoluções</h5>
@@ -310,7 +369,11 @@ const MedicalRecordHistory = () => {
                         className={`border rounded-3 p-3`}
                         style={{ backgroundColor: isSelected ? '#F0F4F3' : '#FFFFFF' }}
                       >
-                        <div className="d-flex justify-content-between align-items-center cursor-pointer" onClick={() => setSelectedEvolutionId(isSelected ? null : item._id)}>
+                        <div
+                          className="d-flex justify-content-between align-items-center cursor-pointer"
+                          onClick={() => setSelectedEvolutionId(isSelected ? null : item._id)}
+                          title="Clique para visualizar os dados desta evolução"
+                        >
                           <span className="text-muted small">{formatDate(item.createdAt)}</span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
@@ -321,7 +384,10 @@ const MedicalRecordHistory = () => {
                             <p className="mb-3"><strong>Evolução:</strong> {item.evolutionText || 'Não informado'}</p>
                             
                             <button onClick={() => handleTriggerPrint('evolution', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                              🖨️ Imprimir Documento Oficial
+                              🖨️ Imprimir 
+                            </button>
+                            <button onClick={() => handleCopyEvolution(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 ms-2">
+                              📋 Copiar
                             </button>
                           </div>
                         )}
@@ -340,8 +406,8 @@ const MedicalRecordHistory = () => {
   const renderMedicalRecordContent = () => {
     return (
       <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3">
+        <div className="col-12">
+          <div ref={medicalRecordFormRef} className="card border-0 shadow-sm rounded-3 h-100">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Registrar Novo Histórico Clínico</h5>
               <form onSubmit={handleSubmitMedicalRecord}>
@@ -349,7 +415,8 @@ const MedicalRecordHistory = () => {
                   <label className="form-label text-muted small fw-bold">Diagnóstico</label>
                   <textarea
                     className="form-control"
-                    rows="2"
+                    rows="3"
+                    style={{ minHeight: '96px', resize: 'vertical' }}
                     value={medicalRecordForm.diagnosis}
                     onChange={(e) => setMedicalRecordForm({ ...medicalRecordForm, diagnosis: e.target.value })}
                     placeholder="Descrição do diagnóstico"
@@ -404,7 +471,7 @@ const MedicalRecordHistory = () => {
           </div>
         </div>
 
-        <div className="col-12 col-lg-6">
+        <div className="col-12">
           <div className="card border-0 shadow-sm rounded-3">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Histórico de Registros Clínicos</h5>
@@ -420,7 +487,11 @@ const MedicalRecordHistory = () => {
                         className={`border rounded-3 p-3`}
                         style={{ backgroundColor: isSelected ? '#F0F4F3' : '#FFFFFF' }}
                       >
-                        <div className="d-flex justify-content-between align-items-center cursor-pointer" onClick={() => setSelectedMedicalRecordId(isSelected ? null : item._id)}>
+                        <div
+                          className="d-flex justify-content-between align-items-center cursor-pointer"
+                          onClick={() => setSelectedMedicalRecordId(isSelected ? null : item._id)}
+                          title="Clique para visualizar os dados deste histórico clínico"
+                        >
                           <span className="text-muted small">{formatDate(item.createdAt)}</span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
@@ -434,7 +505,10 @@ const MedicalRecordHistory = () => {
                               </div>
                             ))}
                             <button onClick={() => handleTriggerPrint('medicalRecord', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2">
-                              🖨️ Imprimir Documento Oficial
+                              🖨️ Imprimir
+                            </button>
+                            <button onClick={() => handleCopyMedicalRecord(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
+                              📋 Copiar
                             </button>
                           </div>
                         )}
@@ -453,8 +527,8 @@ const MedicalRecordHistory = () => {
   const renderPrescriptionContent = () => {
     return (
       <div className="row g-4">
-        <div className="col-12 col-lg-6">
-          <div className="card border-0 shadow-sm rounded-3">
+        <div className="col-12">
+          <div ref={prescriptionFormRef} className="card border-0 shadow-sm rounded-3 h-100">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Registrar Nova Prescrição</h5>
               <form onSubmit={handleSubmitPrescription}>
@@ -462,7 +536,8 @@ const MedicalRecordHistory = () => {
                   <label className="form-label text-muted small fw-bold">Diagnóstico</label>
                   <textarea
                     className="form-control"
-                    rows="2"
+                    rows="3"
+                    style={{ minHeight: '96px', resize: 'vertical' }}
                     value={prescriptionForm.diagnosis}
                     onChange={(e) => setPrescriptionForm({ ...prescriptionForm, diagnosis: e.target.value })}
                     placeholder="Descrição do diagnóstico"
@@ -530,7 +605,8 @@ const MedicalRecordHistory = () => {
                   <label className="form-label text-muted small fw-bold">Observações</label>
                   <textarea
                     className="form-control"
-                    rows="2"
+                    rows="5"
+                    style={{ minHeight: '140px', resize: 'vertical' }}
                     value={prescriptionForm.observations}
                     onChange={(e) => setPrescriptionForm({ ...prescriptionForm, observations: e.target.value })}
                     placeholder="Observações adicionais"
@@ -544,7 +620,7 @@ const MedicalRecordHistory = () => {
           </div>
         </div>
 
-        <div className="col-12 col-lg-6">
+        <div className="col-12">
           <div className="card border-0 shadow-sm rounded-3">
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Histórico de Prescrições</h5>
@@ -560,7 +636,11 @@ const MedicalRecordHistory = () => {
                         className={`border rounded-3 p-3`}
                         style={{ backgroundColor: isSelected ? '#F0F4F3' : '#FFFFFF' }}
                       >
-                        <div className="d-flex justify-content-between align-items-center cursor-pointer" onClick={() => setSelectedPrescriptionId(isSelected ? null : item._id)}>
+                        <div
+                          className="d-flex justify-content-between align-items-center cursor-pointer"
+                          onClick={() => setSelectedPrescriptionId(isSelected ? null : item._id)}
+                          title="Clique para visualizar os dados desta prescrição"
+                        >
                           <span className="text-muted small">{formatDate(item.createdAt)}</span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
@@ -570,7 +650,10 @@ const MedicalRecordHistory = () => {
                             <p className="mb-2"><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
                             <p className="mb-2"><strong>Medicamentos:</strong> {item.medications?.map(m => m.name).join(', ') || 'Nenhum'}</p>
                             <button onClick={() => handleTriggerPrint('prescription', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2">
-                              🖨️ Imprimir Documento Oficial
+                              🖨️ Imprimir 
+                            </button>
+                            <button onClick={() => handleCopyPrescription(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
+                              📋 Copiar 
                             </button>
                           </div>
                         )}

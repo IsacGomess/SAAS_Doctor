@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getPatientAttendanceList } from '../../medical-record/services/medicalRecordService';
-// Supondo que você crie este arquivo de serviço no front seguindo seu padrão:
 import { createAppointment, getAppointments, updateAppointmentStatus } from '../services/appointmentService';
+import { createWaitingLineEntry, getWaitingLine } from '../../waiting-line/services/waitingLineService';
+import { useAuth } from '../../../hooks/useAuth';
+
+const DEFAULT_CLINIC_AREA = 'Geral';
 
 const ClinicSchedule = () => {
   const [patients, setPatients] = useState([]);
@@ -9,6 +12,8 @@ const ClinicSchedule = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [addingPatientId, setAddingPatientId] = useState(null);
+  const { clinicArea, clinicaId, userId } = useAuth();
 
   // Estado do formulário de marcação
   const [scheduleForm, setScheduleForm] = useState({
@@ -65,8 +70,69 @@ const ClinicSchedule = () => {
     try {
       await updateAppointmentStatus(appointmentId, newStatus);
       await loadScheduleData(); // Atualiza a tela
-    } catch (err) {
+    } catch {
       alert('Erro ao atualizar status');
+    }
+  };
+
+  const handleAddToWaitingLine = async (appointment) => {
+    try {
+      setAddingPatientId(appointment._id);
+
+      const patientId = appointment.patientId?._id || appointment.patientId;
+      if (!patientId) {
+        alert('Paciente não identificado para adicionar à fila.');
+        return;
+      }
+
+      // Uma fila sem área selecionada deve sempre ser registrada na área geral.
+      const selectedClinicArea = clinicArea || localStorage.getItem('clinicArea') || DEFAULT_CLINIC_AREA;
+      const selectedClinicaId = clinicaId || localStorage.getItem('clinicaId');
+
+      try {
+        const listResp = await getWaitingLine({ clinicArea: selectedClinicArea });
+        const list = Array.isArray(listResp) ? listResp : (listResp?.waitingLine || []);
+        const todays = list.filter((entry) => {
+          const pid = entry.patientId && (entry.patientId._id || entry.patientId);
+          if (!pid || pid.toString() !== patientId.toString()) return false;
+          const checkIn = entry.checkInAt || entry.calledAt || entry.attendedAt;
+          if (!checkIn) return false;
+          const d = new Date(checkIn);
+          const today = new Date();
+          return d.getFullYear() === today.getFullYear()
+            && d.getMonth() === today.getMonth()
+            && d.getDate() === today.getDate()
+            && entry.status !== 'finalizado'
+            && entry.status !== 'cancelado';
+        });
+
+        if (todays.length > 0) {
+          alert('Este paciente já foi inserido na fila hoje.');
+          return;
+        }
+      } catch (err) {
+        console.warn('Falha ao verificar duplicatas na fila:', err);
+      }
+
+      const payload = {
+        patientId,
+        clinicaId: selectedClinicaId,
+        clinicArea: selectedClinicArea,
+        assignedTo: userId || undefined,
+        // Este é o valor aceito pelo validator da API para agendamento.
+        source: 'consulta_agendada'
+      };
+
+      const createdEntry = await createWaitingLineEntry(payload);
+      if (!createdEntry?.success && !createdEntry?.entry) {
+        throw new Error('A API não confirmou a inclusão do paciente na fila.');
+      }
+      alert(`Paciente ${appointment.patientId?.name || 'Paciente'} adicionado à fila de espera.`);
+    } catch (error) {
+      console.error('Erro ao adicionar paciente à fila de espera:', error);
+      alert('Não foi possível adicionar o paciente à fila. Tente novamente.');
+    } finally {
+      setAddingPatientId(null);
     }
   };
 
@@ -199,16 +265,24 @@ const ClinicSchedule = () => {
                             </td>
                             <td>{getStatusBadge(appt.status)}</td>
                             <td className="text-end">
-                              <div className="dropdown d-inline-block">
-                                <button className="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                  Alterar Status
-                                </button>
-                                <ul className="dropdown-menu dropdown-menu-end">
-                                  <li><button className="dropdown-item text-success" onClick={() => handleStatusChange(appt._id, 'confirmado')}>Confirmar</button></li>
-                                  <li><button className="dropdown-item text-secondary" onClick={() => handleStatusChange(appt._id, 'atendido')}>Marcar como Atendido</button></li>
-                                  <li><hr className="dropdown-divider" /></li>
-                                  <li><button className="dropdown-item text-danger" onClick={() => handleStatusChange(appt._id, 'cancelado')}>Cancelar Agendamento</button></li>
-                                </ul>
+                              <div className="d-flex gap-2 justify-content-end align-items-center">
+                                {selectedDate === new Date().toISOString().split('T')[0] && ['agendado', 'confirmado'].includes(appt.status) && (
+                                  <button
+                                    className="btn btn-sm btn-outline-success"
+                                    onClick={() => handleAddToWaitingLine(appt)}
+                                    disabled={addingPatientId === appt._id}
+                                  >
+                                    {addingPatientId === appt._id ? 'Adicionando...' : 'Add à Fila de espera'}
+                                  </button>
+                                )}
+                                <div className="dropdown d-inline-block">
+                                  <ul className="dropdown-menu dropdown-menu-end">
+                                    <li><button className="dropdown-item text-success" onClick={() => handleStatusChange(appt._id, 'confirmado')}>Confirmar</button></li>
+                                    <li><button className="dropdown-item text-secondary" onClick={() => handleStatusChange(appt._id, 'atendido')}>Marcar como Atendido</button></li>
+                                    <li><hr className="dropdown-divider" /></li>
+                                    <li><button className="dropdown-item text-danger" onClick={() => handleStatusChange(appt._id, 'cancelado')}>Cancelar Agendamento</button></li>
+                                  </ul>
+                                </div>
                               </div>
                             </td>
                           </tr>

@@ -14,7 +14,10 @@ const registerSchema = z.object({
     .max(150, 'O e-mail é longo demais')
     .transform(val => val.toLowerCase()),
   password: z.string()
-    .min(6, 'A senha deve ter pelo menos 6 caracteres')
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+    "Senha fraca")
+    .min(8, 'A senha deve ter pelo menos 8 caracteres')
     .max(100, 'A senha é longa demais'),
   registroProf: z.string()
     .trim()
@@ -27,7 +30,7 @@ const loginSchema = z.object({
     .trim()
     .email('Formato de e-mail inválido')
     .transform(val => val.toLowerCase()),
-  password: z.string().min(6, 'A senha é obrigatória')
+  password: z.string().min(6, 'A senha é obrigatória').max(50, 'A senha é longa demais')
 });
 
 const addMembroSchema = z.object({
@@ -41,7 +44,7 @@ const addMembroSchema = z.object({
     .max(150, 'O e-mail é longo demais')
     .transform(val => val.toLowerCase()),
   password: z.string()
-    .min(6, 'A senha deve ter pelo menos 6 caracteres')
+    .min(8, 'A senha deve ter pelo menos 8 caracteres')
     .max(100, 'A senha é longa demais'),
   role: z.enum(['medico', 'enfermeiro', 'recepcionista', 'fisioterapeuta', 'nutricionista', 'esteticista', 'dentista', 'nutrologo'], {
     errorMap: () => ({ message: 'Cargo inválido. Aceitos: medico, enfermeiro, recepcionista, fisioterapeuta, nutricionista, esteticista, dentista, nutrologo' })

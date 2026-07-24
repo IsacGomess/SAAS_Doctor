@@ -9,6 +9,7 @@ import { CardsDashboard } from './features/dashboard/components/CardsDashboard';
 import { Patients } from './features/dashboard/pages/Patients';
 import MedicalRecordHistory from './features/medical-record/components/MedicalRecordHistory';
 import ClinicSchedule from './features/clinic/pages/clinicSchedule';
+import ReportsPage  from './features/reports/pages/reportPage';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
@@ -32,6 +33,7 @@ function App() {
             <Route path="clinica" element={<ClinicaOnboarding />} />
             <Route path="waiting-line" element={<WaitingLine />} />
             <Route path="clinic-schedule" element={<ClinicSchedule />} />
+            <Route path="reports" element={<ReportsPage />} />
         </Route>
 
 
