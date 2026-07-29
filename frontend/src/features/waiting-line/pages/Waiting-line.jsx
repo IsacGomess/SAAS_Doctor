@@ -1,33 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useWaitingLine } from '../services/useWaitingLine';
+import { getWaitingLine } from '../services/waitingLineService';
 import { WaitingListPanel } from '../components/WaitingListPanel';
 import './Waiting-line.css';
+
+const DEFAULT_CLINIC_AREA = 'Geral';
 
 function WaitingLine() {
   const navigate = useNavigate();
   const auth = useAuth(); // arquivos de autenticaçao global criados em jwt
+  const selectedClinicArea = auth.clinicArea || DEFAULT_CLINIC_AREA;
   const waitingLine = useWaitingLine({
-    clinicArea: auth.clinicArea,
+    clinicArea: selectedClinicArea,
     pollInterval: null,
     assignedUserId: auth.userId
   });
 
   const [clinicAreaInput, setClinicAreaInput] = useState('');
   const [showClinicAreaModal, setShowClinicAreaModal] = useState(false);
+  const [clinicAreas, setClinicAreas] = useState([DEFAULT_CLINIC_AREA]);
+  const [isLoadingClinicAreas, setIsLoadingClinicAreas] = useState(false);
 
-  // Mostrar modal se não tem área selecionada
-  useEffect(() => {
-    if (!auth.isLoading && !auth.clinicArea && !showClinicAreaModal) {
-      setShowClinicAreaModal(true);
+  const handleOpenClinicAreaModal = async () => {
+    setShowClinicAreaModal(true);
+    setIsLoadingClinicAreas(true);
+
+    try {
+      // O backend não possui uma entidade separada de áreas. As áreas já
+      // utilizadas pela clínica são obtidas das entradas existentes da fila.
+      const response = await getWaitingLine();
+      const entries = Array.isArray(response) ? response : (response?.waitingLine || []);
+      const areas = entries
+        .map((entry) => entry.clinicArea?.trim())
+        .filter(Boolean);
+      const uniqueAreas = [...new Map(
+        [DEFAULT_CLINIC_AREA, selectedClinicArea, ...areas]
+          .map((area) => [area.toLowerCase(), area])
+      ).values()];
+
+      setClinicAreas(uniqueAreas);
+    } catch (error) {
+      console.error('Erro ao buscar áreas da clínica:', error);
+      setClinicAreas([DEFAULT_CLINIC_AREA]);
+    } finally {
+      setIsLoadingClinicAreas(false);
     }
-  }, [auth.clinicArea, auth.isLoading, showClinicAreaModal]);
+  };
 
-
-  const handleSetClinicArea = () => {
-    if (clinicAreaInput.trim()) {
-      auth.setDoctorClinicArea(clinicAreaInput.trim());
+  const handleSetClinicArea = (area = clinicAreaInput) => {
+    const normalizedArea = area.trim();
+    if (normalizedArea) {
+      auth.setDoctorClinicArea(normalizedArea);
       setClinicAreaInput('');
       setShowClinicAreaModal(false);
     }
@@ -78,12 +103,12 @@ function WaitingLine() {
           <div className="clinic-area-selector">
             <label>Área da Clínica:</label>
             <div className="clinic-area-display">
-              <span className="clinic-area-badge">{auth.clinicArea || 'Não selecionada'}</span>
+              <span className="clinic-area-badge">{selectedClinicArea}</span>
               <button
                 className="btn btn-outline-light header-action-btn rounded"
-                onClick={() => setShowClinicAreaModal(true)}
+                onClick={handleOpenClinicAreaModal}
               >
-                Alterar
+                Selecionar área
               </button>
             </div>
           </div>
@@ -124,14 +149,31 @@ function WaitingLine() {
         <div className="clinic-area-modal-overlay">
           <div className="clinic-area-modal">
             <h2>Selecione a Área da Clínica</h2>
-            <p>Você precisa selecionar uma área para gerenciar a fila de espera.</p>
+            <p>Selecione uma área cadastrada ou informe uma nova área.</p>
+
+            <div className="clinic-area-options" role="list" aria-label="Áreas cadastradas">
+              {isLoadingClinicAreas ? (
+                <p>Buscando áreas cadastradas...</p>
+              ) : (
+                clinicAreas.map((area) => (
+                  <button
+                    key={area}
+                    type="button"
+                    className="btn btn-outline-secondary w-100 mb-2 text-start"
+                    onClick={() => handleSetClinicArea(area)}
+                  >
+                    {area}
+                  </button>
+                ))
+              )}
+            </div>
 
             <input
               type="text"
               placeholder="Ex: Clínica Geral, Pediatria, Dermatologia..."
               value={clinicAreaInput}
               onChange={(e) => setClinicAreaInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSetClinicArea()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSetClinicArea()}
               className="clinic-area-input"
               autoFocus
             />
@@ -139,7 +181,7 @@ function WaitingLine() {
             <div className="modal-buttons">
               <button
                 className="btn-confirm"
-                onClick={handleSetClinicArea}
+                onClick={() => handleSetClinicArea()}
                 disabled={!clinicAreaInput.trim()}
               >
                 Confirmar

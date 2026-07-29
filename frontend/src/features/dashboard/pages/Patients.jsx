@@ -361,7 +361,7 @@ export const Patients = () => {
                           disabled={addingPatientId === paciente._id}
                           onClick={() => handleAddToWaitingLine(paciente)}
                         >
-                          {addingPatientId === paciente._id ? 'Adicionando...' : 'Adicionar à Fila de espera'}
+                          {addingPatientId === paciente._id ? 'Adicionando...' : 'Add à Fila de espera'}
                         </button>
                       </div>
                     </td>

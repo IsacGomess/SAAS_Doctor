@@ -66,23 +66,13 @@ export function SelectorsDashboard() {
 
 
                 <NavLink
-                    to="relatorios"
+                    to="reports"
                     className={({ isActive }) =>
                         `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
                     }
                 >
                     <i className="bi bi-bar-chart-line icon-menu me-4"></i>
                     <span>Relatórios</span>
-                </NavLink>
-
-                <NavLink
-                    to="configuracoes"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-gear icon-menu me-4"></i>
-                    <span>Configurações</span>
                 </NavLink>
 
             </div>
