@@ -47,8 +47,8 @@ exports.logout = async (req, res) => {
     const isProd = process.env.NODE_ENV === 'production';
     
     // Limpa ambos os cookies setando o maxAge para zero
-    res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'lax' : 'none' });
-    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: isProd ? 'lax' : 'none' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite:'lax' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite:'lax' });
 
     return res.status(200).json({ success: true, message: 'Deslogado com sucesso' });
 };

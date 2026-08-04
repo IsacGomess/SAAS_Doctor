@@ -10,7 +10,7 @@ const app = express();
 
 app.use(helmet()) // Adiciona o middleware Helmet para segurança HTTP (protege contra algumas vulnerabilidades conhecidas)
 
-// 3. Limite do JSON proteje contra ataques a grandes volumes de processamento de dados.
+// 3. Limite do JSON proteje contra ataques a grandes volumes de processamento de dados e faz o jsom ser lido 
 app.use(express.json({
     limit: '1mb'
 }));
@@ -23,7 +23,6 @@ app.use(cors({
 }));
 
 // 3. INTERPRETADORES DE REQUISIÇÃO (Dados e Cookies)
-app.use(express.json()); // Permite que o Express interprete requisições com corpo em JSON
 app.use(cookieParser()); // Permite que o Express interprete cookies nas requisições
 
 // 4. LOGGER DE REQUISIÇÕES (Agora ele roda com segurança após o CORS aprovar a chamada)
