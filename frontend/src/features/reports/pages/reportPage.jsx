@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAppointmentsMonthly, getPatientsGrowth, getWaitTimeMonthly, getPlansMonthly } from '../services/reportService';
-import { ClinicCharts } from '../components/Clinic';
+import { ClinicCharts } from '../components/clinic';
 
 const ReportsPage = () => {
   const [loading, setLoading] = useState(true);
