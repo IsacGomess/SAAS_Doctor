@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser'); // Importa o middleware cookie-pa
 // 1. PRIMEIRO INSTANCIA O APP
 const app = express(); 
 
+app.set('trust proxy', 1); // Configura o Express para confiar no proxy reverso (útil se estiver atrás de um proxy ou load balancer)
 app.use(helmet()) // Adiciona o middleware Helmet para segurança HTTP (protege contra algumas vulnerabilidades conhecidas)
 
 // 3. Limite do JSON proteje contra ataques a grandes volumes de processamento de dados e faz o jsom ser lido 

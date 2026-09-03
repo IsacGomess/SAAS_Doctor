@@ -2,14 +2,17 @@
 import { useState } from "react";
 import api from "../../../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
+import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
 
 function Login() {
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate(); // Inicializa o hook useNavigate
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try { 
         const response = await api.post('/api/users/login', { email, password });
         
@@ -43,6 +46,8 @@ function Login() {
     } catch (error) {
         console.error("[AUTH] Erro ao tentar logar:", error);
         alert("Erro de usuário ou senha ao logar.");
+    } finally {
+        setLoading(false);
     }
 };
     return (
@@ -69,7 +74,7 @@ function Login() {
                 <div className="left-panel-content">
                   
                   {/* Logo */}
-                  <div className="logo-area ">
+                  <div className="logo-area">
                     <span className="fs-3 me-2"></span>
                     <span className="fw-bold tracking-wide h4 m-0" style={{color:"white"}}></span>
                   </div>
@@ -84,7 +89,7 @@ function Login() {
                       <div className="benefit-icon " style={{fontSize:'40px',color:"white"}}><i className="bi bi-globe-americas-fill pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Gestão Eficiente</strong></div>
                       <div>
                         
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Controle uma gestão eficiente de planos e faturamento de forma integrada.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Controle uma gestão eficiente de planos e faturamento de forma integrada com gráficos e relatórios.</p>
                       </div>
                     </div>
                     
@@ -145,7 +150,7 @@ function Login() {
                       justifyContent: 'center',
                       fontSize: '28px'
                     }}>
-                      <img src="./src/images/login-image.png" alt="" style={{width:'60px',height:'60px',borderRadius:'50%'}}/>️
+                      <img src={avatar} alt="AvatarMédico" style={{width:'60px',height:'60px',borderRadius:'50%'}}/>️
                     </div>
                   </div>
 
