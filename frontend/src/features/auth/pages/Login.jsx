@@ -238,23 +238,23 @@ function Login() {
                     {/* Botão Entrar Ocupando 100% */}
                     <div style={{ display: 'block', marginBottom: '25px' }}>
                       <button 
-                        type="submit" 
-                        style={{
-                          backgroundColor: '#1E6B65',
-                          color: '#FFFFFF',
-                          width: '100%',
-                          height: '50px',
-                          borderRadius: '10px',
-                          border: 'none',
-                          fontWeight: '700',
-                          fontSize: '15px',
-                          letterSpacing: '0.5px',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(30, 107, 101, 0.15)',
-                          display: 'block'
-                        }}
+                      type="submit"
+                      disabled={loading}
+                      style={{
+                        backgroundColor: '#1E6B65',
+                        color: '#FFFFFF',
+                        width: '100%',
+                        height: '50px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        fontWeight: '700',
+                        fontSize: '15px',
+                        letterSpacing: '0.5px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.7 : 1
+                      }}
                       >
-                        ENTRAR NO SISTEMA
+                      {loading ? 'ENTRANDO...' : 'ENTRAR NO SISTEMA'}
                       </button>
                     </div>
 

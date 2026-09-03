@@ -1,8 +1,10 @@
 import { useState } from "react";
 import api from "../../../services/api";
 import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
+import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
 
 function Register() {
+    const [loading, setLoading] = useState(false);
     const [name,setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -11,6 +13,7 @@ function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
         try {
             // Envia os dados para a rota do backend
             await api.post('/api/users/register', { name, email, password, registroProf });
@@ -24,6 +27,8 @@ function Register() {
             const mensagem = error.response?.data?.message || "Erro no servidor";
             console.error("Erro completo:", error.response?.data); 
             alert("Erro ao registrar médico: " + mensagem);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -164,7 +169,7 @@ function Register() {
               justifyContent: 'center',
               fontSize: '28px'
             }}>
-              <img src="./src/images/login-image.png" alt="" style={{width:'60px',height:'60px',borderRadius:'50%'}}/>️
+              <img src={avatar} alt="AvatarMedico" style={{width:'60px',height:'60px',borderRadius:'50%'}}/>️
             </div>
           </div>
 
@@ -308,24 +313,24 @@ function Register() {
             {/* Botão Finalizar Cadastro */}
             <div style={{ display: 'block', marginBottom: '25px' }}>
               <button 
-                type="submit" 
-                style={{
-                  backgroundColor: '#1E6B65',
-                  color: '#FFFFFF',
-                  width: '100%',
-                  height: '50px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontWeight: '700',
-                  fontSize: '15px',
-                  letterSpacing: '0.5px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(30, 107, 101, 0.15)',
-                  display: 'block'
-                }}
-              >
-                FINALIZAR CADASTRO
-              </button>
+                      type="submit"
+                      disabled={loading}
+                      style={{
+                        backgroundColor: '#1E6B65',
+                        color: '#FFFFFF',
+                        width: '100%',
+                        height: '50px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        fontWeight: '700',
+                        fontSize: '15px',
+                        letterSpacing: '0.5px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.7 : 1
+                      }}
+                      >
+                      {loading ? 'CADASTRANDO...' : 'FINALIZAR CADASTRO'}
+                      </button>
             </div>
 
             {/* Link para Voltar ao Login */}
