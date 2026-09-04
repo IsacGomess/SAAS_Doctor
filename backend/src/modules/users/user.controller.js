@@ -2,7 +2,10 @@ const jwt = require('jsonwebtoken');
 const { ZodError } = require('zod');
 const User = require('./user.model.js');
 const bcrypt = require('bcrypt');
-const { registerSchema, loginSchema, addMembroSchema, membroIdParamSchema } = require('./user.validator.js');
+const { registerSchema, loginSchema, addMembroSchema, membroIdParamSchema,forgotPasswordSchema,resetPasswordSchema} = require('./user.validator.js');
+const crypto = require('crypto');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 exports.refresh = async (req, res) => {
@@ -319,6 +322,159 @@ exports.deleteMembro = async (req, res) => {
         return res.status(500).json({
             message: 'Erro ao remover membro/Error removing member',
             error: error.message
+        });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password } = resetPasswordSchema.parse(req.body);
+
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Nova senha é obrigatória.'
+            });
+        }
+
+        const resetTokenHash = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken: resetTokenHash,
+            resetPasswordExpires: {
+                $gt: Date.now()
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Link de recuperação inválido ou expirado.'
+            });
+        }
+
+        // IMPORTANTE:
+        // Não usamos bcrypt.hash aqui.
+        user.password = password;
+
+        user.resetPasswordToken = null;
+        user.resetPasswordExpires = null;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Senha redefinida com sucesso.'
+        });
+
+    } catch (error) {
+        console.error('[PASSWORD RESET] Erro:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Erro interno do servidor.'
+        });
+    }
+};
+
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = forgotPasswordSchema.parse(req.body);
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'E-mail é obrigatório.'
+            });
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase()
+        });
+
+        // Resposta propositalmente genérica
+        if (!user) {
+            return res.status(200).json({
+                success: true,
+                message:
+                    'Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.'
+            });
+        }
+
+        // Token que será enviado ao usuário
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        // Hash que será armazenado no MongoDB
+        const resetTokenHash = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+
+        user.resetPasswordToken = resetTokenHash;
+
+        user.resetPasswordExpires =
+            Date.now() + 15 * 60 * 1000;
+
+        await user.save();
+
+        const resetUrl =
+            `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+         //ENVIA O E-MAIL
+        const { error } = await resend.emails.send({
+            from: 'Med1PE <no-reply@med1pe.com.br>',
+            to: user.email,
+            subject: 'Recuperação de senha - Med1PE',
+            html: `
+                <h2>Recuperação de senha</h2>
+
+                <p>Recebemos uma solicitação para redefinir sua senha.</p>
+
+                <p>
+                    <a href="${resetUrl}">
+                        Redefinir minha senha
+                    </a>
+                </p>
+
+                <p>Este link é válido por 15 minutos.</p>
+
+                <p>
+                    Se você não solicitou esta alteração,
+                    ignore este e-mail.
+                </p>
+            `
+        });
+        if (error) {
+        console.error('[EMAIL] Erro ao enviar:', error);
+
+        // O e-mail não foi enviado, então invalida o token criado
+        user.resetPasswordToken = null;
+        user.resetPasswordExpires = null;
+        await user.save();
+
+        return res.status(500).json({
+            success: false,
+            message: 'Não foi possível enviar o e-mail de recuperação.'
+        });
+    }
+
+        return res.status(200).json({
+            success: true,
+            message:
+                'Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.'
+        });
+
+    } catch (error) {
+        console.error('[FORGOT PASSWORD] Erro:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Erro interno do servidor.'
         });
     }
 };

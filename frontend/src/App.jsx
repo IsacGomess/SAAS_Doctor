@@ -10,6 +10,8 @@ import { Patients } from './features/dashboard/pages/Patients';
 import MedicalRecordHistory from './features/medical-record/components/MedicalRecordHistory';
 import ClinicSchedule from './features/clinic/pages/clinicSchedule';
 import ReportsPage  from './features/reports/pages/reportPage';
+import ForgotPassword from './features/auth/pages/Forgotpassword';
+import ResetPassword from './features/auth/pages/Resetpassword';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
@@ -24,6 +26,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} /> <Route path="/reset-password/:token" element={<ResetPassword />}/>
         
         {/* Dashboard geral */}
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}>

@@ -11,7 +11,16 @@ const userSchema = new mongoose.Schema({
     observations:{ type: String },
     role: { type: String, enum: ['administrador', 'medico', 'enfermeiro', 'recepcionista', 'fisioterapeuta', 'nutricionista', 'esteticista', 'dentista', 'nutrologo'], default: 'recepcionista' },
     isActive: { type: Boolean, default: true },
-    clinicaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinica', default: null }
+    clinicaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinica', default: null },
+    resetPasswordToken: {
+    type: String,
+    default: null
+    },
+
+    resetPasswordExpires: {
+        type: Date,
+        default: null
+    }
     
 }, { timestamps: true });
 

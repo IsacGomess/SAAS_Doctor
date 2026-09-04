@@ -18,15 +18,26 @@ exports.authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-exports.generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 500,
 
-    handler: (req, res) => {
-        console.log("Rate limit atingido:", req.ip, req.originalUrl);
 
-        res.status(429).json({
-            message: "Rate limit atingido"
-        });
+exports.forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5,                  // 5 solicitações por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Muitas solicitações. Tente novamente em alguns minutos.'
     }
+});
+
+exports.refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Muitas solicitações de renovação de sessão.'
+  }
 });
