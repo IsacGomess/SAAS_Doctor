@@ -205,7 +205,7 @@ function Login() {
                           Senha
                         </label>
                         <span 
-                          onClick={() => {/* lógica de recuperar senha */}}
+                          onClick={() => navigate("/forgot-password")}
                           style={{ color: '#1E6B65', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                         >
                           Esqueceu a senha?
