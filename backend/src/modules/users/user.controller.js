@@ -10,40 +10,58 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.refresh = async (req, res) => {
     try {
-        // Pega o refresh token guardado de forma segura no cookie
-        const refreshToken = req.cookies ? req.cookies.refreshToken : null;
+        const refreshToken = req.cookies?.refreshToken;
 
         if (!refreshToken) {
-            return res.status(401).json({ message: 'Refresh token não fornecido' });
+            return res.status(401).json({
+                message: 'Refresh token não fornecido'
+            });
         }
 
-        // Valida o refresh token usando a chave de segurança de refresh
-        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
-            if (err) {
-                return res.status(403).json({ message: 'Refresh token inválido ou expirado' });
-            }
+        const decoded = jwt.verify(
+            refreshToken,
+            process.env.JWT_REFRESH_SECRET
+        );
 
-            // Se o refresh for válido, gera um NOVO accessToken
-            const newAccessToken = jwt.sign(
-                { userId: decoded.userId, name: decoded.name, clinicaId: decoded.clinicaId || null },
-                process.env.JWT_SECRET,
-                { expiresIn: '1h' }
-            );
+        const user = await User.findById(decoded.userId);
 
-            const isProd = process.env.NODE_ENV === 'production';
-
-            // Salva o novo access token no cookie novamente
-            res.cookie('accessToken', newAccessToken, {
-                httpOnly: true,
-                secure: isProd,
-                sameSite:'lax',
-                maxAge: 60 * 60 * 1000 // 1 hora
+        if ( !user || !user.isActive || decoded.tokenVersion !== user.tokenVersion) {
+            return res.status(403).json({
+            success: false,
+            message: 'Sessão inválida ou expirada.'
             });
+        }
 
-            return res.status(200).json({ success: true, message: 'Token renovado' });
+        const newAccessToken = jwt.sign(
+            {
+                userId: user._id,
+                name: user.name,
+                clinicaId: user.clinicaId || null,
+                tokenVersion: user.tokenVersion
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        const isProd = process.env.NODE_ENV === 'production';
+
+        res.cookie('accessToken', newAccessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 1000
         });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Token renovado'
+        });
+
     } catch (error) {
-        return res.status(500).json({ message: 'Erro ao renovar token', error: error.message });
+        return res.status(403).json({
+            success: false,
+            message: 'Refresh token inválido ou expirado'
+        });
     }
 };
 exports.logout = async (req, res) => {
@@ -91,7 +109,7 @@ exports.login = async (req, res) => {
         const { password, email } = loginSchema.parse(req.body);
 
         const user = await User.findOne({ email });
-        if (!user) {
+        if (!user || !user.isActive) {
             console.log('User not found for email:');
             return res.status(400).json({ message: 'Usuário não encontrado ou senha incorreta/User not found or incorrect password' });
         }
@@ -102,13 +120,17 @@ exports.login = async (req, res) => {
         }
 
         const accessToken = jwt.sign(
-        { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
+        { userId: user._id, name: user.name, clinicaId: user.clinicaId || null, tokenVersion: user.tokenVersion },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
         );
+
         const refreshToken = jwt.sign(
-            { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
-            process.env.JWT_REFRESH_SECRET,
+            {
+                userId: user._id,
+                tokenVersion: user.tokenVersion
+            },
+                process.env.JWT_REFRESH_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -234,9 +256,12 @@ exports.getMembros = async (req, res) => {
     }
 
     try {
-        const membros = await User.find({ clinicaId: req.clinicaId })
-            .select('-password')
-            .sort({ createdAt: -1 });
+        const membros = await User.find({
+        clinicaId: req.clinicaId
+})      .select(
+            '_id name email registroProf specialty phone role isActive clinicaId createdAt'
+)
+        .sort({ createdAt: -1 });
 
         return res.status(200).json({
             success: true,
@@ -257,8 +282,6 @@ exports.deleteMembro = async (req, res) => {
 
         console.log('🔵 deleteMembro chamado');
         console.log('   req.userId:', req.userId);
-        console.log('   req.clinicaId:', req.clinicaId);
-        console.log('   membroId:', membroId);
 
         if (!req.clinicaId) {
             console.log('❌ Erro: usuário sem clinicaId');
@@ -282,7 +305,7 @@ exports.deleteMembro = async (req, res) => {
             console.log('❌ Erro: membro não encontrado');
             return res.status(404).json({
                 success: false,
-                message: 'Membro não encontrado/Member not found'
+                message: 'Error interno do servidor/ Internal server error'
             });
         }
 
@@ -307,7 +330,7 @@ exports.deleteMembro = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Membro removido com sucesso/Member removed successfully'
+            message: ' ✅ Membro removido com sucesso/Member removed successfully'
         });
     } catch (error) {
         if (error instanceof ZodError) {
@@ -358,12 +381,14 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        // IMPORTANTE:
-        // Não usamos bcrypt.hash aqui.
+        // sem ultilizar hash 
         user.password = password;
 
         user.resetPasswordToken = null;
         user.resetPasswordExpires = null;
+
+        // invalida todos os refreshTokens antigos
+        user.tokenVersion += 1;
 
         await user.save();
 
@@ -375,7 +400,7 @@ exports.resetPassword = async (req, res) => {
     } catch (error) {
         console.error('[PASSWORD RESET] Erro:', error);
 
-        return res.status(500).json({
+        return res.status(400).json({
             success: false,
             message: 'Erro interno do servidor.'
         });
@@ -457,9 +482,9 @@ exports.forgotPassword = async (req, res) => {
         user.resetPasswordExpires = null;
         await user.save();
 
-        return res.status(500).json({
+        return res.status(200).json({
             success: false,
-            message: 'Não foi possível enviar o e-mail de recuperação.'
+            message: 'Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.'
         });
     }
 
@@ -472,7 +497,7 @@ exports.forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('[FORGOT PASSWORD] Erro:', error);
 
-        return res.status(500).json({
+        return res.status(400).json({
             success: false,
             message: 'Erro interno do servidor.'
         });
