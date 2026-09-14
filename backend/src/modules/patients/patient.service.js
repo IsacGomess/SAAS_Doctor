@@ -29,7 +29,7 @@ class PatientService {
                 isPresent: true,
                 $or: [
                     { clinicaId: clinicaId },
-                    { clinicaId: null, profesionalId: userId } // Correção do campo profissionalId
+                    { clinicaId: null, profissionalId: userId } // Correção do campo profissionalId
                 ]
             };
         } else {
@@ -49,7 +49,10 @@ class PatientService {
     }
 
     async getMedicalRecords(patientId) {
-        return await MedicalRecord.find({ patientId }).sort({ createdAt: -1 });
+        return await MedicalRecord.find({ patientId })
+            .populate('belongsTo', 'name registroProf')
+            .populate('canceledBy', 'name registroProf')
+            .sort({ createdAt: -1 });
     }
 
     // --- MÉTODOS DE EVOLUÇÃO ---
@@ -58,12 +61,17 @@ class PatientService {
             patientId: evolutionData.patientId,
             belongsTo: userId,
             diagnosis: evolutionData.diagnosis,
-            evolutionText: evolutionData.evolutionText
+            evolutionText: evolutionData.evolutionText,
+            conduct: evolutionData.conduct,
+            patientRecommendations: evolutionData.patientRecommendations
         });
     }
 
     async getEvolutions(patientId) {
-        return await Evolution.find({ patientId }).sort({ createdAt: -1 });
+        return await Evolution.find({ patientId })
+            .populate('belongsTo', 'name registroProf')
+            .populate('canceledBy', 'name registroProf')
+            .sort({ createdAt: -1 });
     }
 
     // --- MÉTODOS DE PRESCRIÇÃO (RECEITAS) ---
@@ -78,7 +86,30 @@ class PatientService {
     }
 
     async getPrescriptions(patientId) {
-        return await Prescription.find({ patientId }).sort({ createdAt: -1 });
+        return await Prescription.find({ patientId })
+            .populate('belongsTo', 'name registroProf')
+            .populate('canceledBy', 'name registroProf')
+            .sort({ createdAt: -1 });
+    }
+
+    // Marca um item (evolução, prontuário ou prescrição) como cancelado (visual), registra quem e quando
+    async cancelItem(patientId, type, itemId, userId) {
+        let Model;
+        if (type === 'evolution') Model = Evolution;
+        else if (type === 'medicalRecord') Model = MedicalRecord;
+        else if (type === 'prescription') Model = Prescription;
+        else throw new Error('Tipo inválido');
+
+        const doc = await Model.findOne({ _id: itemId, patientId });
+        if (!doc) throw new Error('Item não encontrado');
+
+        doc.canceled = true;
+        doc.canceledAt = new Date();
+        doc.canceledBy = userId;
+
+        await doc.save();
+        // Popula usuário que cancelou antes de retornar
+        return await Model.findById(doc._id).populate('canceledBy', 'name registroProf');
     }
 }
 

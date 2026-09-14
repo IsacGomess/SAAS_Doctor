@@ -21,5 +21,8 @@ routes.use(authMiddleware.authenticateToken);
 routes.post('/membros', userController.addMembro);
 routes.get('/membros', userController.getMembros);
 routes.delete('/membros/:membroId', userController.deleteMembro);
+routes.get('/me', userController.me);
+routes.patch('/me', userController.updateMe);
+routes.patch('/membros/:membroId', userController.updateMembro);
 
 module.exports = routes;

@@ -6,6 +6,7 @@ const {
   evolutionSchema,
   prescriptionSchema,
   patientIdParamSchema
+  , cancelItemSchema
 } = require('./patient.validator.js');
 
 const canAccessPatient = (req, patient) => {
@@ -54,6 +55,10 @@ exports.getPatients = async (req, res) => {
 exports.medicalRecord = async (req, res) => {
   try {
     const recordData = medicalRecordSchema.parse(req.body);
+    // exige número de registro profissional para usuários que não são recepcionistas
+    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
+      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar dados no prontuário. Por favor, adicione seu número na área da clínica.' });
+    }
     const newDataPatient = await PatientService.createMedicalRecord(recordData, req.userId);
     return res.status(201).json({ success: true, message: 'Dados do paciente registrados com sucesso', dataPatient: newDataPatient });
   } catch (error) {
@@ -75,6 +80,11 @@ exports.getMedicalRecords = async (req, res) => {
     const patient = await PatientService.findPatientById(patientId);
     if (!canAccessPatient(req, patient)) {
       return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    }
+
+    // Recepcionistas não podem visualizar prontuário
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
     const records = await PatientService.getMedicalRecords(patientId);
@@ -104,6 +114,16 @@ exports.evolution = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
     }
 
+    // Recepcionistas não podem criar/alterar evoluções
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    // exige número de registro profissional para usuários que não são recepcionistas
+    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
+      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar evoluções. Por favor, adicione seu número na área da clínica.' });
+    }
+
     const newEvolution = await PatientService.createEvolution(evolutionData, req.userId);
     return res.status(201).json({ success: true, message: 'Evolução registrada com sucesso', evolutions: newEvolution });
   } catch (error) {
@@ -122,6 +142,16 @@ exports.evolution = async (req, res) => {
 exports.getEvolutions = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
+    // Recepcionistas não podem visualizar evoluções
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    // exige número de registro profissional para usuários que não são recepcionistas
+    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
+      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta para visualizar evoluções. Por favor, adicione seu número na área da clínica.' });
+    }
+
     const evolutions = await PatientService.getEvolutions(patientId);
     if (!evolutions || evolutions.length === 0) {
       return res.status(404).json({ success: true, message: 'Nenhuma evolução encontrada' });
@@ -148,6 +178,16 @@ exports.prescription = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
     }
 
+    // Recepcionistas não podem criar/alterar prescrições
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    // exige número de registro profissional para usuários que não são recepcionistas
+    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
+      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar prescrições. Por favor, adicione seu número na área da clínica.' });
+    }
+
     const newPrescription = await PatientService.createPrescription(prescriptionData, req.userId);
     return res.status(201).json({ success: true, message: 'Prescrição registrada com sucesso', prescription: newPrescription });
   } catch (error) {
@@ -166,6 +206,11 @@ exports.prescription = async (req, res) => {
 exports.getPrescriptions = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
+    // Recepcionistas não podem visualizar prescrições
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
     const prescriptions = await PatientService.getPrescriptions(patientId);
     if (!prescriptions || prescriptions.length === 0) {
       return res.status(404).json({ success: true, message: 'Nenhuma prescrição encontrada' });
@@ -181,5 +226,48 @@ exports.getPrescriptions = async (req, res) => {
     }
 
     return res.status(500).json({ message: 'Erro ao obter prescrições', error: error.message });
+  }
+};
+
+exports.cancelItem = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const { itemId, type } = cancelItemSchema.parse(req.body);
+
+    const patient = await PatientService.findPatientById(patientId);
+    if (!canAccessPatient(req, patient)) {
+      return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    }
+
+    // Busca o documento para checar ownership
+    let Model;
+    if (type === 'evolution') Model = require('./evolution.model.js');
+    else if (type === 'medicalRecord') Model = require('./medicalRecord.model.js');
+    else if (type === 'prescription') Model = require('./prescription.model.js');
+    else return res.status(400).json({ success: false, message: 'Tipo inválido' });
+
+    const doc = await Model.findOne({ _id: itemId, patientId });
+    if (!doc) return res.status(404).json({ success: false, message: 'Item não encontrado' });
+
+    // Recepcionistas não podem cancelar
+    if (req.user && req.user.role === 'recepcionista') {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    // Somente administrador ou autor do registro pode cancelar
+    if (req.user && req.user.role !== 'administrador') {
+      // owner check: documents store belongsTo
+      if (!doc.belongsTo || doc.belongsTo.toString() !== req.userId.toString()) {
+        return res.status(403).json({ success: false, message: 'Apenas o autor ou administrador pode cancelar este item.' });
+      }
+    }
+
+    const updated = await PatientService.cancelItem(patientId, type, itemId, req.userId);
+    return res.status(200).json({ success: true, message: 'Item marcado como cancelado', item: updated });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Dados inválidos.', errors: error.flatten().fieldErrors });
+    }
+    return res.status(500).json({ message: 'Erro ao cancelar item', error: error.message });
   }
 };

@@ -4,8 +4,9 @@ class ReportsController {
     async getAppointmentsMonthly(req, res, next) {
         try {
             // Segurança robusta: clinicaId extraído do cookie de autenticação criptografado
-            const { clinicaId } = req.user; 
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const data = await reportsService.getAppointmentsMonthly(clinicaId);
             return res.json(data);
@@ -16,8 +17,9 @@ class ReportsController {
 
     async getPatientsGrowth(req, res, next) {
         try {
-            const { clinicaId } = req.user;
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const data = await reportsService.getPatientsGrowth(clinicaId);
             return res.json(data);
@@ -28,8 +30,9 @@ class ReportsController {
 
     async getWaitTimeMonthly(req, res, next) {
         try {
-            const { clinicaId } = req.user;
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const data = await reportsService.getWaitTimeMonthly(clinicaId);
             return res.json(data);
@@ -40,8 +43,9 @@ class ReportsController {
 
     async getPlansMonthly(req, res, next) {
         try {
-            const { clinicaId } = req.user;
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const data = await reportsService.getPlansMonthly(clinicaId);
             return res.json(data);
@@ -52,8 +56,9 @@ class ReportsController {
 
     async getDashboardSummary(req, res, next) {
         try {
-            const { clinicaId } = req.user;
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const data = await reportsService.getDashboardSummary(clinicaId);
             return res.json(data);
@@ -64,8 +69,9 @@ class ReportsController {
 
     async getPlansWeekly(req, res, next) {
         try {
-            const { clinicaId } = req.user;
+            const { clinicaId, role } = req.user;
             if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
+            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
 
             const limit = parseInt(req.query.limit, 10) || 5;
             const data = await reportsService.getPlansWeekly(clinicaId, limit);

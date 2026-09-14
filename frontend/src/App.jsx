@@ -12,6 +12,8 @@ import ClinicSchedule from './features/clinic/pages/clinicSchedule';
 import ReportsPage  from './features/reports/pages/reportPage';
 import ForgotPassword from './features/auth/pages/Forgotpassword';
 import ResetPassword from './features/auth/pages/Resetpassword';
+import TermsOfUsePage from './features/legal/pages/TermsOfUsePage';
+import PrivacyPolicyPage from './features/legal/pages/PrivacyPolicyPage';
 
 // Componente para proteger rotas privadas
 const PrivateRoute = ({ children }) => {
@@ -26,8 +28,11 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} /> <Route path="/reset-password/:token" element={<ResetPassword />}/>
-        
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/termos-de-uso" element={<TermsOfUsePage />} />
+        <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
+
         {/* Dashboard geral */}
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>}>
             <Route index element={<CardsDashboard />} />

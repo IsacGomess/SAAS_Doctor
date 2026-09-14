@@ -66,6 +66,15 @@ export const createPrescription = async (data) => {
     }
 };
 
+export const cancelItem = async (patientId, type, itemId) => {
+    try {
+        const response = await api.post(`/api/patients/${patientId}/cancel-item`, { type, itemId });
+        return response.data;
+    } catch (err) {
+        throw err.response?.data || { message: 'Erro ao cancelar item' };
+    }
+};
+
 export default {
     createMedicalRecord,
     createEvolution,
@@ -74,4 +83,5 @@ export default {
     getMedicalRecords,
     getEvolutions,
     getPrescriptions,
+    cancelItem,
 };

@@ -57,7 +57,9 @@ const medicalRecordSchema = z.object({
 const evolutionSchema = z.object({
   patientId: objectIdSchema,
   diagnosis: diagnosisSchema.optional(),
-  evolutionText: z.string().trim().max(15000, 'Evolução muito longa').optional()
+  evolutionText: z.string().trim().max(15000, 'Evolução muito longa').optional(),
+  conduct: z.string().trim().max(10000, 'Conduta muito longa').optional(),
+  patientRecommendations: z.string().trim().max(10000, 'Recomendação ao paciente muito longa').optional()
 });
 
 const prescriptionSchema = z.object({
@@ -72,10 +74,16 @@ const prescriptionSchema = z.object({
   observations: z.string().trim().max(5000, 'Observações muito longas').optional()
 });
 
+const cancelItemSchema = z.object({
+  itemId: objectIdSchema,
+  type: z.enum(['evolution', 'medicalRecord', 'prescription'])
+});
+
 module.exports = {
   registerPatientSchema,
   medicalRecordSchema,
   evolutionSchema,
   prescriptionSchema,
   patientIdParamSchema
+  , cancelItemSchema
 };

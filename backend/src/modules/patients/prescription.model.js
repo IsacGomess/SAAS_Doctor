@@ -14,6 +14,9 @@ const prescriptionSchema = new mongoose.Schema({
         duration:{ type: String, required: true },
     }],
     observations:{ type: String },
+    canceled: { type: Boolean, default: false },
+    canceledAt: { type: Date, default: null },
+    canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
 const Prescription = mongoose.model('Prescription', prescriptionSchema, 'prescriptions');

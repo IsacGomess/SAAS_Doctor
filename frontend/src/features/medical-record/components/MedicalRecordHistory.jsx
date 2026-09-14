@@ -8,6 +8,7 @@ import {
   createEvolution,
   createMedicalRecord,
   createPrescription,
+  cancelItem,
 } from '../services/medicalRecordService';
 
 const formatDate = (value) => {
@@ -26,8 +27,20 @@ const formatCpf = (cpf = '') => {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
+const getProfessionalInfo = () => {
+  const userName = localStorage.getItem('userName') || 'Profissional não identificado';
+  const registroProf = localStorage.getItem('registroProf') || 'Não informado';
+
+  return {
+    userName: userName.trim(),
+    registroProf: registroProf.trim(),
+    label: `${userName.trim().toLocaleUpperCase()}${registroProf ? ` -  Reg.  ${registroProf.trim()}` : ''}`,
+  };
+};
+
 const MedicalRecordHistory = () => {
   const { patientId } = useParams();
+  const userRole = localStorage.getItem('role') || '';
   const [activeTab, setActiveTab] = useState('evolution');
   const [patient, setPatient] = useState(null);
   const [history, setHistory] = useState({
@@ -49,7 +62,12 @@ const MedicalRecordHistory = () => {
   const prescriptionFormRef = useRef(null);
 
   // Estados dos formulários
-  const [evolutionForm, setEvolutionForm] = useState({ diagnosis: '', evolutionText: '' });
+  const [evolutionForm, setEvolutionForm] = useState({
+    diagnosis: '',
+    evolutionText: '',
+    conduct: '',
+    patientRecommendations: ''
+  });
   const [medicalRecordForm, setMedicalRecordForm] = useState({
     diagnosis: '',
     quickHistory: [{ comorbidities: '', diesease: '', observation: '' }],
@@ -84,6 +102,16 @@ const MedicalRecordHistory = () => {
     loadHistory();
   }, [patientId]);
 
+  const handleCancel = async (type, itemId) => {
+    if (!patientId) return;
+    try {
+      await cancelItem(patientId, type, itemId);
+      await refreshHistory();
+    } catch (err) {
+      alert('Erro ao cancelar item: ' + (err?.message || 'Tente novamente'));
+    }
+  };
+
   const refreshHistory = async () => {
     try {
       const [evolutions, medicalRecords, prescriptions] = await Promise.all([
@@ -105,8 +133,10 @@ const MedicalRecordHistory = () => {
         patientId,
         diagnosis: { description: evolutionForm.diagnosis },
         evolutionText: evolutionForm.evolutionText,
+        conduct: evolutionForm.conduct,
+        patientRecommendations: evolutionForm.patientRecommendations,
       });
-      setEvolutionForm({ diagnosis: '', evolutionText: '' });
+      setEvolutionForm({ diagnosis: '', evolutionText: '', conduct: '', patientRecommendations: '' });
       setSelectedEvolutionId(null);
       await refreshHistory();
     } catch (err) {
@@ -157,12 +187,33 @@ const MedicalRecordHistory = () => {
 
   // 💡 FUNÇÃO CORRIGIDA QUE ATUALIZA OS DADOS E DISPARA O PRINT NATIVO
   const handleTriggerPrint = (type, item) => {
-    setPrintData({ type, item });
-    // Aguarda o React renderizar o HTML oculto com os dados corretos antes de chamar a janela de impressão
+    if (type === 'evolution') {
+      setPrintData({ type: 'evolutionSection', item, section: 'evolution' });
+    } else {
+      setPrintData({ type, item, section: type === 'evolutionSection' ? 'recommendation' : undefined });
+    }
+
     setTimeout(() => {
       window.print();
-    }, 150);
+    }, 250);
   };
+
+  const renderPatientHeaderBox = (patientData, professionalData, createdAt) => (
+    <div className="doc-patient-box">
+      <div className="doc-patient-row">
+        <div><strong>PACIENTE:</strong> {patientData?.name?.toUpperCase()}</div>
+        <div><strong>CPF:</strong> {formatCpf(patientData?.cpf || '')}</div>
+      </div>
+      <div className="doc-patient-row mt-1">
+        <div><strong>IDADE:</strong> {patientData?.idade || patientData?.age || 'Não informado'} anos</div>
+        <div><strong>DATA DO REGISTRO:</strong> {formatDate(createdAt)}</div>
+      </div>
+      <div className="doc-patient-row mt-1">
+        <div><strong>PROFISSIONAL:</strong> {professionalData.userName}</div>
+        <div><strong>REGISTRO:</strong> {professionalData.registroProf || 'Não informado'}</div>
+      </div>
+    </div>
+  );
 
   const scrollToForm = (formRef) => {
     setTimeout(() => {
@@ -170,11 +221,26 @@ const MedicalRecordHistory = () => {
     }, 0);
   };
 
+  const handleExportRecommendation = (item) => {
+    const text = item.patientRecommendations;
+    if (!text || !text.trim()) {
+      alert('Nenhuma recomendação disponível para exportar.');
+      return;
+    }
+
+    setPrintData({ type: 'evolutionSection', item, section: 'recommendation' });
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   const handleCopyEvolution = (item) => {
     setActiveTab('evolution');
     setEvolutionForm({
       diagnosis: item.diagnosis?.description || '',
-      evolutionText: item.evolutionText || ''
+      evolutionText: item.evolutionText || '',
+      conduct: item.conduct || '',
+      patientRecommendations: item.patientRecommendations || ''
     });
     setSelectedEvolutionId(null);
     scrollToForm(evolutionFormRef);
@@ -223,47 +289,79 @@ const MedicalRecordHistory = () => {
   // =========================================================================
   const renderOfficialPrintDocument = () => {
     if (!printData) return null;
-    const { type, item } = printData;
+    const { type, item, section } = printData;
+    const professional = getProfessionalInfo();
 
     const titles = {
-      evolution: 'EVOLUÇÃO CLÍNICA',
-      medicalRecord: 'HISTÓRICO CLÍNICO DO PACIENTE',
-      prescription: 'PRESCRIÇÃO MÉDICA'
+      evolution: 'EVOLUÇÃO',
+      evolutionSection: 'RECOMENDAÇÕES',
+      medicalRecord: 'HISTÓRICO CLÍNICO',
+      prescription: 'PRESCRIÇÃO'
     };
 
     return (
       <div className="only-print official-document-sheet">
         {/* 1. CABEÇALHO DA CLÍNICA */}
         <div className="doc-clinic-header">
-          <h2>MED</h2>
-          <p className="doc-subtitle">Atendimento Especializado Integrado</p>
+          <h2>Med1PE</h2>
+          <p className="doc-subtitle">Atendimento Especializado</p>
           <div className="doc-divider"></div>
         </div>
 
         {/* 2. DADOS DO PACIENTE */}
-        <div className="doc-patient-box">
-          <div className="doc-patient-row">
-            <div><strong>PACIENTE:</strong> {patient?.name?.toUpperCase()}</div>
-            <div><strong>CPF:</strong> {formatCpf(patient?.cpf || '')}</div>
-          </div>
-          <div className="doc-patient-row mt-1">
-            <div><strong>IDADE:</strong> {patient?.idade || patient?.age || 'Não informado'} anos</div>
-            <div><strong>DATA DO REGISTRO:</strong> {formatDate(item.createdAt)}</div>
-          </div>
-        </div>
+        {renderPatientHeaderBox(patient, professional, item.createdAt)}
 
         {/* 3. TÍTULO DO DOCUMENTO ATUAL */}
         <div className="doc-title-section">
-          <h3>{titles[type]}</h3>
+          <h3>{type === 'evolutionSection' && section === 'evolution' ? 'EVOLUÇÃO' : titles[type]}</h3>
         </div>
 
         {/* 4. CORPO DO DOCUMENTO */}
         <div className="doc-body-content">
+          {type === 'evolutionSection' && section === 'evolution' && (
+            <div>
+              <div className="mt-2">
+                <p className="fw-bold text-uppercase">Evolução</p>
+                <div className="doc-text-block">{item.evolutionText || 'Não informado'}</div>
+              </div>
+
+              {item.conduct && (
+                <div className="mt-4">
+                  <p className="fw-bold text-uppercase">Conduta</p>
+                  <div className="doc-text-block">{item.conduct}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {type === 'evolutionSection' && section === 'recommendation' && (
+            <div>
+              <div className="mt-4">
+                <p className="fw-bold text-uppercase">Recomendação</p>
+                <div className="doc-text-block">{item.patientRecommendations || 'Não informado'}</div>
+              </div>
+            </div>
+          )}
+
           {type === 'evolution' && (
             <div>
               <p><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
               <p className="mt-3"><strong>Descrição da Evolução:</strong></p>
-              <div className="doc-text-block">{item.evolutionText}</div>
+              <div className="doc-text-block">{item.evolutionText || 'Não informado'}</div>
+
+              {item.conduct && (
+                <div className="mt-4">
+                  <p className="fw-bold text-uppercase">Condutas</p>
+                  <div className="doc-text-block">{item.conduct}</div>
+                </div>
+              )}
+
+              {item.patientRecommendations && (
+                <div className="mt-4">
+                  <p className="fw-bold text-uppercase">Recomendações</p>
+                  <div className="doc-text-block">{item.patientRecommendations}</div>
+                </div>
+              )}
             </div>
           )}
 
@@ -305,15 +403,22 @@ const MedicalRecordHistory = () => {
 
         {/* 5. ASSINATURA */}
         <div className="doc-footer-signature">
-          <div className="doc-signature-line"></div>
-          <p className="m-0">Assinatura e Carimbo do Profissional</p>
-          <small className="text-muted" style={{ fontSize: '9px' }}>Documento eletrônico extraído do Prontuário Médico do Paciente.</small>
+          <div className="doc-signature-line"> </div>
+          <p className="m-0"><strong>{professional.userName}</strong> • {professional.registroProf || 'Registro não informado'}</p>
+          <p className="m-0">Assinatura do profissional</p>
+          <small className="text-muted" style={{ fontSize: '9px' }}>Documento eletrônico extraído do Prontuário do Paciente.</small>
         </div>
       </div>
     );
   };
 
   const renderEvolutionContent = () => {
+    if (userRole === 'recepcionista') {
+      return (
+        <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar evoluções.</div>
+      );
+    }
+
     return (
       <div className="row g-4">
         <div className="col-12">
@@ -333,17 +438,41 @@ const MedicalRecordHistory = () => {
                     required
                   />
                 </div>
-                <div className="mb-4">
+                <div className="mb-3">
                   <label className="form-label text-muted small fw-bold">Evolução</label>
                   <textarea
                     className="form-control"
-                    rows="12"
-                    style={{ minHeight: '320px', resize: 'vertical' }}
+                    rows="10"
+                    style={{ minHeight: '220px', resize: 'vertical' }}
                     value={evolutionForm.evolutionText}
                     onChange={(e) => setEvolutionForm({ ...evolutionForm, evolutionText: e.target.value })}
                     placeholder="Evolução Clínica"
                     required
                   />
+                </div>
+                <div className="row g-3 mb-4">
+                  <div className="col-12 col-lg-6">
+                    <label className="form-label text-muted small fw-bold">Conduta</label>
+                    <textarea
+                      className="form-control"
+                      rows="6"
+                      style={{ minHeight: '150px', resize: 'vertical' }}
+                      value={evolutionForm.conduct}
+                      onChange={(e) => setEvolutionForm({ ...evolutionForm, conduct: e.target.value })}
+                      placeholder="Descreva a conduta adotada"
+                    />
+                  </div>
+                  <div className="col-12 col-lg-6">
+                    <label className="form-label text-muted small fw-bold">Recomendação ao paciente</label>
+                    <textarea
+                      className="form-control"
+                      rows="6"
+                      style={{ minHeight: '150px', resize: 'vertical' }}
+                      value={evolutionForm.patientRecommendations}
+                      onChange={(e) => setEvolutionForm({ ...evolutionForm, patientRecommendations: e.target.value })}
+                      placeholder="Orientações e cuidados para o paciente"
+                    />
+                  </div>
                 </div>
                 <button type="submit" className="btn text-white px-4" style={{ backgroundColor: '#1E6B65' }} disabled={submitting}>
                   {submitting ? 'Salvando...' : 'Salvar Evolução'}
@@ -363,6 +492,7 @@ const MedicalRecordHistory = () => {
                 <div className="d-flex flex-column gap-2">
                   {history.evolutions.map((item) => {
                     const isSelected = selectedEvolutionId === item._id;
+                    const canceled = Boolean(item.canceled);
                     return (
                       <div
                         key={item._id}
@@ -374,21 +504,45 @@ const MedicalRecordHistory = () => {
                           onClick={() => setSelectedEvolutionId(isSelected ? null : item._id)}
                           title="Clique para visualizar os dados desta evolução"
                         >
-                          <span className="text-muted small">{formatDate(item.createdAt)}</span>
+                          <span className="text-muted small d-flex align-items-center gap-2 flex-wrap">
+                            {formatDate(item.createdAt)}
+                            <span className="text-muted">• {item.belongsTo?.name ? `${item.belongsTo.name}${item.belongsTo.registroProf ? ` - Reg. ${item.belongsTo.registroProf}` : ''}` : getProfessionalInfo().label}</span>
+                          </span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
 
                         {isSelected && (
                           <div className="mt-3 pt-3 border-top">
+                            {canceled && (
+                              <div className="mb-2">
+                                <span className="badge bg-danger text-white">CANCELADO</span>
+                                {item.canceledAt && <small className="ms-2 text-muted">{formatDate(item.canceledAt)}</small>}
+                                {item.canceledBy && (item.canceledBy.name || item.canceledBy.registroProf) && (
+                                  <small className="ms-2 text-muted">• {item.canceledBy.name || 'Usuário'}{item.canceledBy.registroProf ? ` - ${item.canceledBy.registroProf}` : ''}</small>
+                                )}
+                              </div>
+                            )}
                             <p className="mb-2"><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
-                            <p className="mb-3"><strong>Evolução:</strong> {item.evolutionText || 'Não informado'}</p>
-                            
-                            <button onClick={() => handleTriggerPrint('evolution', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                              🖨️ Imprimir 
-                            </button>
-                            <button onClick={() => handleCopyEvolution(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 ms-2">
-                              📋 Copiar
-                            </button>
+                            <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Evolução:</strong> {item.evolutionText || 'Não informado'}</p>
+                            <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Conduta:</strong> {item.conduct || 'Não informado'}</p>
+                            <p className="mb-3" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Recomendação ao paciente:</strong> {item.patientRecommendations || 'Não informado'}</p>
+
+                            <div className="d-flex flex-wrap gap-2">
+                              <button onClick={() => handleTriggerPrint('evolution', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                🖨️ Imprimir
+                              </button>
+                              <button onClick={() => handleExportRecommendation(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                📄 Recomendações ao paciente
+                              </button>
+                              <button onClick={() => handleCopyEvolution(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                📋 Copiar
+                              </button>
+                              {!canceled && (
+                                <button onClick={() => handleCancel('evolution', item._id)} className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
+                                  🗑️ Apagar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -404,6 +558,12 @@ const MedicalRecordHistory = () => {
   };
 
   const renderMedicalRecordContent = () => {
+    if (userRole === 'recepcionista') {
+      return (
+        <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar histórico clínico.</div>
+      );
+    }
+
     return (
       <div className="row g-4">
         <div className="col-12">
@@ -481,6 +641,7 @@ const MedicalRecordHistory = () => {
                 <div className="d-flex flex-column gap-2">
                   {history.medicalRecords.map((item) => {
                     const isSelected = selectedMedicalRecordId === item._id;
+                    const canceled = Boolean(item.canceled);
                     return (
                       <div
                         key={item._id}
@@ -492,15 +653,27 @@ const MedicalRecordHistory = () => {
                           onClick={() => setSelectedMedicalRecordId(isSelected ? null : item._id)}
                           title="Clique para visualizar os dados deste histórico clínico"
                         >
-                          <span className="text-muted small">{formatDate(item.createdAt)}</span>
+                          <span className="text-muted small d-flex align-items-center gap-2 flex-wrap">
+                            {formatDate(item.createdAt)}
+                            <span className="text-muted">• {item.belongsTo?.name ? `${item.belongsTo.name}${item.belongsTo.registroProf ? ` - Reg. ${item.belongsTo.registroProf}` : ''}` : getProfessionalInfo().label}</span>
+                          </span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
 
                         {isSelected && (
                           <div className="mt-3 pt-3 border-top">
-                            <p className="mb-3"><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
+                            {canceled && (
+                              <div className="mb-2">
+                                <span className="badge bg-danger text-white">CANCELADO</span>
+                                {item.canceledAt && <small className="ms-2 text-muted">{formatDate(item.canceledAt)}</small>}
+                                {item.canceledBy && (item.canceledBy.name || item.canceledBy.registroProf) && (
+                                  <small className="ms-2 text-muted">• {item.canceledBy.name || 'Usuário'}{item.canceledBy.registroProf ? ` - ${item.canceledBy.registroProf}` : ''}</small>
+                                )}
+                              </div>
+                            )}
+                            <p className="mb-3" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
                             {(item.quickHistory || []).map((entry, idx) => (
-                              <div key={idx} className="mb-2 p-2 border-start border-3 border-success bg-light rounded-end small">
+                              <div key={idx} className="mb-2 p-2 border-start border-3 border-success bg-light rounded-end small" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}>
                                 <p className="mb-1"><strong>Historico Atual da Doença:</strong> {entry.diesease} | <strong>Comorbidades:</strong> {entry.comorbidities}</p>
                               </div>
                             ))}
@@ -510,6 +683,11 @@ const MedicalRecordHistory = () => {
                             <button onClick={() => handleCopyMedicalRecord(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
                               📋 Copiar
                             </button>
+                            {!canceled && (
+                              <button onClick={() => handleCancel('medicalRecord', item._id)} className={`btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 mt-2 ms-2`}>
+                                🗑️ Apagar
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -525,6 +703,12 @@ const MedicalRecordHistory = () => {
   };
 
   const renderPrescriptionContent = () => {
+    if (userRole === 'recepcionista') {
+      return (
+        <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar prescrições.</div>
+      );
+    }
+
     return (
       <div className="row g-4">
         <div className="col-12">
@@ -630,6 +814,7 @@ const MedicalRecordHistory = () => {
                 <div className="d-flex flex-column gap-2">
                   {history.prescriptions.map((item) => {
                     const isSelected = selectedPrescriptionId === item._id;
+                    const canceled = Boolean(item.canceled);
                     return (
                       <div
                         key={item._id}
@@ -641,20 +826,37 @@ const MedicalRecordHistory = () => {
                           onClick={() => setSelectedPrescriptionId(isSelected ? null : item._id)}
                           title="Clique para visualizar os dados desta prescrição"
                         >
-                          <span className="text-muted small">{formatDate(item.createdAt)}</span>
+                          <span className="text-muted small d-flex align-items-center gap-2 flex-wrap">
+                            {formatDate(item.createdAt)}
+                            <span className="text-muted">• {item.belongsTo?.name ? `${item.belongsTo.name}${item.belongsTo.registroProf ? ` - Reg. ${item.belongsTo.registroProf}` : ''}` : getProfessionalInfo().label}</span>
+                          </span>
                           <small className="text-muted">{isSelected ? '▼' : '▶'}</small>
                         </div>
 
                         {isSelected && (
                           <div className="mt-3 pt-3 border-top">
-                            <p className="mb-2"><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
-                            <p className="mb-2"><strong>Medicamentos:</strong> {item.medications?.map(m => m.name).join(', ') || 'Nenhum'}</p>
+                            {canceled && (
+                              <div className="mb-2">
+                                <span className="badge bg-danger text-white">CANCELADO</span>
+                                {item.canceledAt && <small className="ms-2 text-muted">{formatDate(item.canceledAt)}</small>}
+                                {item.canceledBy && (item.canceledBy.name || item.canceledBy.registroProf) && (
+                                  <small className="ms-2 text-muted">• {item.canceledBy.name || 'Usuário'}{item.canceledBy.registroProf ? ` - ${item.canceledBy.registroProf}` : ''}</small>
+                                )}
+                              </div>
+                            )}
+                            <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
+                            <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Medicamentos:</strong> {item.medications?.map(m => m.name).join(', ') || 'Nenhum'}</p>
                             <button onClick={() => handleTriggerPrint('prescription', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2">
                               🖨️ Imprimir 
                             </button>
                             <button onClick={() => handleCopyPrescription(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
                               📋 Copiar 
                             </button>
+                            {!canceled && (
+                              <button onClick={() => handleCancel('prescription', item._id)} className={`btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 mt-2 ms-2`}>
+                                🗑️ Apagar
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -677,45 +879,71 @@ const MedicalRecordHistory = () => {
         .only-print { display: none !important; }
         
         @media print {
-          /* 1. FORCE ESCONDER QUALQUER ELEMENTO FORA DO SEU ARQUIVO (SIDEBAR GLOBAL E NAV) */
+          @page {
+            size: A4;
+            margin: 6mm 6mm 10mm 6mm;
+          }
+
           aside, nav, .sidebar, .navbar, #sidebar, .sidebar-wrapper, [class*="sidebar"], [class*="nav"] {
             display: none !important;
           }
 
-          /* 2. OCULTA A TELA NORMAL DO SISTEMA INTERNA */
           .no-print {
             display: none !important;
           }
-          
-          /* 3. EXIBE EXCLUSIVAMENTE O PAPEL TIMBRADO ATÔMICO */
+
           body, html, #root {
             background: #ffffff !important;
             color: #000000 !important;
             width: 100% !important;
+            min-height: auto !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow: visible !important;
           }
-          
+
           .only-print.official-document-sheet {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            height: auto !important;
+            min-height: auto !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+            zoom: 0.86 !important;
+            transform-origin: top center;
+            margin: 0 auto !important;
           }
-          
-          /* 4. ESTILIZAÇÃO VISUAL DO PAPEL TIMBRADO (A4) */
+
           .official-document-sheet {
-            padding: 40px !important;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            height: auto !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             color: #111;
             line-height: 1.6;
+            box-sizing: border-box !important;
           }
+
           .doc-clinic-header {
             text-align: center;
-            margin-bottom: 25px;
+            margin: 0 0 12px 0;
           }
           .doc-clinic-header h2 {
             color: #1E6B65 !important;
             font-weight: bold;
             margin: 0;
             letter-spacing: 1px;
+            font-size: 24px;
           }
           .doc-subtitle {
             font-size: 13px;
@@ -729,31 +957,49 @@ const MedicalRecordHistory = () => {
           .doc-patient-box {
             background-color: #f9f9f9 !important;
             border: 1px solid #eee !important;
-            padding: 12px 15px;
+            padding: 10px 12px;
             border-radius: 6px;
-            margin-bottom: 30px;
-            font-size: 13px;
+            margin-bottom: 14px;
+            font-size: 12.5px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
           .doc-patient-row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
           }
           .doc-title-section {
             text-align: center;
-            margin-bottom: 25px;
+            margin: 0 0 10px 0;
+            width: 100%;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            display: block;
           }
           .doc-title-section h3 {
             border-bottom: 1px solid #ddd;
-            display: inline-block;
-            padding-bottom: 5px;
+            display: block;
+            width: 100%;
+            padding-bottom: 4px;
             font-weight: bold;
             color: #333;
+            margin: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.15;
+            letter-spacing: 0.02em;
+            white-space: normal;
+            font-size: 17px;
           }
           .doc-body-content {
             font-size: 15px;
-            margin-bottom: 80px;
+            margin-bottom: 24px;
+            flex: 1 1 auto;
           }
           .doc-text-block {
             white-space: pre-wrap;
@@ -762,6 +1008,8 @@ const MedicalRecordHistory = () => {
             border-left: 3px solid #1E6B65 !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+            overflow-wrap: anywhere;
+            word-break: break-word;
           }
           .doc-item-card {
             border-bottom: 1px solid #eee;
@@ -780,18 +1028,18 @@ const MedicalRecordHistory = () => {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          
-          /* 5. ASSINATURA ANCORADA NO FIM DA FOLHA */
+
           .doc-footer-signature {
-            position: fixed;
-            bottom: 40px;
-            left: 0;
-            right: 0;
+            margin-top: auto;
+            padding-top: 18px;
             text-align: center;
+            width: 100%;
+            align-self: center;
             page-break-inside: avoid;
+            break-inside: avoid;
           }
           .doc-signature-line {
-            width: 280px;
+            width: 240px;
             margin: 0 auto 8px auto;
             border-bottom: 1px dotted #000 !important;
           }
@@ -805,8 +1053,43 @@ const MedicalRecordHistory = () => {
       <div className="no-print">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Prontuário Médico</h2>
+            <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Prontuário do Paciente</h2>
             <p className="text-muted m-0">Visualize a evolução, histórico clínico e prescrições do paciente.</p>
+            <div className="d-flex flex-wrap gap-2 mt-3">
+              <a
+                href="https://cremesp.org.br/?siteAcao=cid10"
+                target="_blank"
+                rel="noreferrer"
+                className="d-inline-flex align-items-center gap-2 text-decoration-none fw-semibold px-3 py-2 rounded-pill border"
+                style={{
+                  backgroundColor: '#EAF5F4',
+                  borderColor: '#B9D9D6',
+                  color: '#1E6B65',
+                  boxShadow: '0 2px 8px rgba(30, 107, 101, 0.08)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <span aria-hidden="true">🔎</span>
+                Buscar CID da doença
+              </a>
+
+              <a
+                href="https://cbdf.coffito.gov.br/cbdf"
+                target="_blank"
+                rel="noreferrer"
+                className="d-inline-flex align-items-center gap-2 text-decoration-none fw-semibold px-3 py-2 rounded-pill border"
+                style={{
+                  backgroundColor: '#EAF5F4',
+                  borderColor: '#B9D9D6',
+                  color: '#1E6B65',
+                  boxShadow: '0 2px 8px rgba(30, 107, 101, 0.08)',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <span aria-hidden="true">📘</span>
+                C.B. DOENÇAS FISIOTERAPÊUTICAS
+              </a>
+            </div>
           </div>
         </div>
 

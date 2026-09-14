@@ -35,7 +35,8 @@ class ClinicService {
     }
 
     async findById(clinicId) {
-        return await Clinica.findById(clinicId);
+        // populate donoId to include administrator's public info
+        return await Clinica.findById(clinicId).populate('donoId', '_id name email registroProf role');
     }
 }
 module.exports = new ClinicService();

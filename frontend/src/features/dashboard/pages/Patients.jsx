@@ -175,32 +175,91 @@ export const Patients = () => {
   }
 
   return (
-    <div className="container-fluid pt-5 ps-1 pe-0 w-100" style={{ minHeight: '100%' }}>
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-        <div>
-          <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Pacientes</h2>
-          <p className="text-muted m-0">Gerencie os prontuários e cadastros da sua clínica</p>
+    <>
+      <style>{`
+        @media (max-width: 767px) {
+          .patients-mobile-list thead {
+            display: none !important;
+          }
+
+          .patients-mobile-list tbody,
+          .patients-mobile-list tr,
+          .patients-mobile-list td {
+            display: block !important;
+            width: 100% !important;
+          }
+
+          .patients-mobile-list tbody {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+
+          .patients-mobile-list tr {
+            background: #fff !important;
+            border: 1px solid #e9ecef !important;
+            border-radius: 12px !important;
+            padding: 14px 12px !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
+          }
+
+          .patients-mobile-list td {
+            border: none !important;
+            padding: 4px 0 !important;
+          }
+
+          .patients-mobile-list td.patient-mobile-hidden {
+            display: none !important;
+          }
+
+          .patients-mobile-list td.patient-mobile-name {
+            display: block !important;
+            padding-bottom: 10px !important;
+          }
+
+          .patients-mobile-list td.patient-mobile-actions {
+            display: block !important;
+            padding-top: 10px !important;
+          }
+
+          .patients-mobile-list .patient-mobile-actions .d-flex {
+            justify-content: flex-end !important;
+            gap: 8px !important;
+          }
+
+          .patients-mobile-list .patient-mobile-actions .btn {
+            flex: 1 1 0 !important;
+            min-width: 120px !important;
+          }
+        }
+      `}</style>
+
+      <div className="container-fluid pt-5 ps-1 pe-0 w-100" style={{ minHeight: '100%' }}>
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+          <div>
+            <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Pacientes</h2>
+            <p className="text-muted m-0">Gerencie os prontuários e cadastros da sua clínica</p>
+          </div>
+          <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-md-auto">
+            <input
+              type="search"
+              className="form-control"
+              style={{ minWidth: '220px', maxWidth: '320px' }}
+              placeholder="Buscar por nome ou CPF"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            {!showForm && (
+              <button
+                className="btn text-white px-4 py-2 shadow-sm"
+                style={{ backgroundColor: '#1E6B65' }}
+                onClick={() => setShowForm(true)}
+              >
+                + Novo Paciente
+              </button>
+            )}
+          </div>
         </div>
-        <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-md-auto">
-          <input
-            type="search"
-            className="form-control"
-            style={{ minWidth: '220px', maxWidth: '320px' }}
-            placeholder="Buscar por nome ou CPF"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-          {!showForm && (
-            <button
-              className="btn text-white px-4 py-2 shadow-sm"
-              style={{ backgroundColor: '#1E6B65' }}
-              onClick={() => setShowForm(true)}
-            >
-              + Novo Paciente
-            </button>
-          )}
-        </div>
-      </div>
 
       {showForm && (
         <div className="card border-0 shadow-sm rounded-3 mb-4 animate__animated animate__fadeIn">
@@ -324,7 +383,7 @@ export const Patients = () => {
       <div className="card border-0 shadow-sm rounded-3">
         <div className="card-body p-4">
           <div className="table-responsive">
-            <table className="table table-hover align-middle m-0">
+            <table className="table table-hover align-middle m-0 patients-mobile-list">
               <thead className="table-light">
                 <tr>
                   <th>Nome do Paciente</th>
@@ -338,23 +397,23 @@ export const Patients = () => {
               <tbody>
                 {filteredPatients.map((paciente) => (
                   <tr key={paciente._id}>
-                    <td>
+                    <td className="patient-mobile-name">
                       <div className="fw-bold text-dark">{paciente.name}</div>
                       <small className="text-muted d-block">
                         Plano: {getConvenioLabel(paciente)}
                       </small>
                     </td>
-                    <td className="text-muted">{paciente.cpf}</td>
-                    <td className="text-muted">{paciente.idade ?? '-'}</td>
-                    <td className="text-muted">📞 {paciente.phone}</td>
-                    <td className="text-muted">{paciente.observations}</td>
-                    <td className="text-end">
+                    <td className="text-muted patient-mobile-hidden">{paciente.cpf}</td>
+                    <td className="text-muted patient-mobile-hidden">{paciente.idade ?? '-'}</td>
+                    <td className="text-muted patient-mobile-hidden">📞 {paciente.phone}</td>
+                    <td className="text-muted patient-mobile-hidden">{paciente.observations}</td>
+                    <td className="text-end patient-mobile-actions">
                       <div className="d-flex flex-wrap justify-content-end gap-2">
                         <button
                           className="btn btn-sm btn-outline-secondary"
                           onClick={() => navigate(`/dashboard/patients/${paciente._id}/history`)}
                         >
-                          Prontuário 
+                          Prontuário
                         </button>
                         <button
                           className="btn btn-sm btn-outline-success"
@@ -374,5 +433,6 @@ export const Patients = () => {
       </div>
     )}
     </div>
+    </>
   );
 };

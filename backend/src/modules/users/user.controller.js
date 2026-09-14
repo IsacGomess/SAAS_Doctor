@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { ZodError } = require('zod');
 const User = require('./user.model.js');
 const bcrypt = require('bcrypt');
-const { registerSchema, loginSchema, addMembroSchema, membroIdParamSchema,forgotPasswordSchema,resetPasswordSchema} = require('./user.validator.js');
+const { registerSchema, loginSchema, addMembroSchema, addMembroSchemaWithRegistro, membroIdParamSchema,forgotPasswordSchema,resetPasswordSchema} = require('./user.validator.js');
 const crypto = require('crypto');
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -156,7 +156,7 @@ exports.login = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Login bem-sucedido/Login successful',
-            user: { name: user.name, clinicaId: user.clinicaId || null }
+            user: { name: user.name, clinicaId: user.clinicaId || null, registroProf: user.registroProf || null, role: user.role }
         });
     } catch (error) {
         if (error instanceof ZodError) {
@@ -167,7 +167,7 @@ exports.login = async (req, res) => {
             });
         }
 
-        return res.status(500).json({ message: 'Erro ao fazer login/Error logging in', error: error.message });
+        return res.status(500).json({ message: 'Erro ao fazer login/Error logging in', error: 'Erro no servidor' });
     }
 };
 
@@ -178,7 +178,7 @@ exports.addMembro = async (req, res) => {
     console.log('   req.user:', req.user);
 
     try {
-        const { name, email, password, role } = addMembroSchema.parse(req.body);
+        const { name, email, password, role, registroProf } = addMembroSchemaWithRegistro.parse(req.body);
 
         if (!req.clinicaId) {
             console.log('❌ Erro: usuário sem clinicaId');
@@ -211,6 +211,7 @@ exports.addMembro = async (req, res) => {
             email,
             password,
             role,
+            registroProf: registroProf || null,
             clinicaId: req.clinicaId,
             isActive: true
         });
@@ -241,7 +242,7 @@ exports.addMembro = async (req, res) => {
         console.error('❌ Erro ao adicionar membro:', error);
         return res.status(500).json({
             message: 'Erro ao cadastrar membro/Error registering member',
-            error: error.message
+            error: 'Erro nos dados digite novamente !'
         });
     }
 };
@@ -271,8 +272,31 @@ exports.getMembros = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             message: 'Erro ao buscar membros/Error fetching members',
-            error: error.message
+            error: 'Erro no servidor'
         });
+    }
+};
+
+exports.me = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId).select('_id name registroProf role clinicaId');
+        if (!user) return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+        return res.status(200).json({ success: true, user });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Erro ao obter usuário', error: error.message });
+    }
+};
+
+exports.updateMe = async (req, res) => {
+    try {
+        const { registroProf } = req.body;
+        if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
+
+        const updated = await User.findByIdAndUpdate(req.userId, { registroProf: registroProf || null }, { new: true }).select('_id name registroProf role clinicaId');
+        return res.status(200).json({ success: true, user: updated });
+    } catch (error) {
+        console.error('Erro updateMe:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao atualizar usuário', error: error.message });
     }
 };
 
@@ -344,8 +368,47 @@ exports.deleteMembro = async (req, res) => {
         console.error('❌ Erro ao remover membro:', error);
         return res.status(500).json({
             message: 'Erro ao remover membro/Error removing member',
-            error: error.message
+            error: 'Erro no servidor'
         });
+    }
+};
+
+exports.updateMembro = async (req, res) => {
+    try {
+        const { membroId } = membroIdParamSchema.parse(req.params);
+        const { email, registroProf, name } = req.body;
+
+        if (!req.clinicaId) {
+            return res.status(403).json({ success: false, message: 'Usuário sem clínica associada/User has no clinic associated' });
+        }
+
+        const currentUser = await User.findById(req.userId);
+        if (!currentUser || currentUser.role !== 'administrador') {
+            return res.status(403).json({ success: false, message: 'Apenas administradores podem editar membros/Only administrators can edit members' });
+        }
+
+        const membro = await User.findById(membroId);
+        if (!membro) return res.status(404).json({ success: false, message: 'Membro não encontrado' });
+
+        if (membro.clinicaId.toString() !== req.clinicaId.toString()) {
+            return res.status(403).json({ success: false, message: 'Você não pode editar membros de outras clínicas/You cannot edit members from other clinics' });
+        }
+
+        // Prevent removing admin role or changing clinicaId via this endpoint
+        const updates = {};
+        if (typeof email === 'string') updates.email = email;
+        if (typeof registroProf === 'string') updates.registroProf = registroProf || null;
+        if (typeof name === 'string') updates.name = name;
+
+        const updated = await User.findByIdAndUpdate(membroId, updates, { new: true }).select('_id name email registroProf role clinicaId');
+
+        return res.status(200).json({ success: true, message: 'Membro atualizado com sucesso', membro: updated });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({ success: false, message: 'ID inválido', errors: error.flatten().fieldErrors });
+        }
+        console.error('Erro updateMembro:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao atualizar membro', error: error.message });
     }
 };
 
@@ -406,6 +469,7 @@ exports.resetPassword = async (req, res) => {
         });
     }
 };
+
 
 exports.forgotPassword = async (req, res) => {
     try {

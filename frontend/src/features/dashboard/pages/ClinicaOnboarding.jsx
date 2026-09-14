@@ -7,6 +7,7 @@ function ClinicaOnboarding() {
   const auth = useAuth();
   const [clinica, setClinica] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [membros, setMembros] = useState([]);
   const [isLoadingMembros, setIsLoadingMembros] = useState(false);
   
@@ -22,7 +23,8 @@ function ClinicaOnboarding() {
     name: '',
     email: '',
     password: '',
-    role: 'recepcionista'
+    role: 'recepcionista',
+    registroProf: ''
   });
 
   const [message, setMessage] = useState(null);
@@ -30,6 +32,9 @@ function ClinicaOnboarding() {
   const [messageMembro, setMessageMembro] = useState(null);
   const [errorMembro, setErrorMembro] = useState(null);
   const [deletingMembroId, setDeletingMembroId] = useState(null);
+  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [editingMemberData, setEditingMemberData] = useState({ email: '', registroProf: '', name: '' });
+  const [adminEditingRegistro, setAdminEditingRegistro] = useState(false);
   const [convenios, setConvenios] = useState([]);
   const [isLoadingConvenios, setIsLoadingConvenios] = useState(false);
   const [newConvenioName, setNewConvenioName] = useState("");
@@ -51,6 +56,13 @@ function ClinicaOnboarding() {
           setClinica(response.data.clinica);
           loadMembros();
           loadConvenios();
+          // set current user id if available
+          try {
+            const me = await api.get('/api/users/me');
+            setCurrentUserId(me.data.user?._id || null);
+          } catch (e) {
+            // ignore
+          }
         }
       } catch (err) {
         console.error('Erro ao buscar clínica:', err);
@@ -116,6 +128,10 @@ function ClinicaOnboarding() {
           localStorage.setItem('clinicaId', clinicaId);
           console.log('Clínica criada com ID:', clinicaId);
         }
+        // store role and userId/registroProf so UI updates immediately
+        if (response.data.user?.role) localStorage.setItem('role', response.data.user.role);
+        if (response.data.user?._id) localStorage.setItem('userId', response.data.user._id);
+        if (response.data.user?.registroProf) localStorage.setItem('registroProf', response.data.user.registroProf);
       }
 
       setClinica(response.data.clinica);
@@ -143,9 +159,15 @@ function ClinicaOnboarding() {
     console.log('   Form data:', formMembro);
 
     try {
+      // client-side validation: registroProf required unless recepcionista
+      if (formMembro.role !== 'recepcionista' && !formMembro.registroProf.trim()) {
+        setErrorMembro('Número de registro é obrigatório para este cargo.');
+        return;
+      }
+
       const data = await addMembro(formMembro);
       console.log('✅ Membro adicionado com sucesso:', data);
-      setFormMembro({ name: '', email: '', password: '', role: 'recepcionista' });
+      setFormMembro({ name: '', email: '', password: '', role: 'recepcionista', registroProf: '' });
       setMessageMembro('Membro adicionado com sucesso!');
       loadMembros();
     } catch (err) {
@@ -245,7 +267,50 @@ function ClinicaOnboarding() {
           <p><strong>Endereço:</strong> {clinica.address || 'Não informado'}</p>
           <p><strong>Telefone:</strong> {clinica.phone || 'Não informado'}</p>
           <p><strong>E-mail:</strong> {clinica.email || 'Não informado'}</p>
-          <p><strong>Administrador:</strong> {auth.userName}</p>
+          <p><strong>Administrador:</strong> {clinica.donoId && clinica.donoId.name ? clinica.donoId.name : auth.userName}</p>
+          {clinica.donoId && currentUserId && clinica.donoId._id === currentUserId && (
+            <div style={{ marginTop: 8 }}>
+              <label style={{ display: 'block', fontSize: 13, color: '#333', marginBottom: 6 }}>Seu Número de Registro Profissional</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={clinica.donoId.registroProf || ''}
+                  onChange={(e) => {
+                    setClinica((prev) => ({
+                      ...prev,
+                      donoId: { ...prev.donoId, registroProf: e.target.value }
+                    }));
+                  }}
+                  placeholder="Ex: CRM12345"
+                  disabled={!!clinica.donoId.registroProf && !adminEditingRegistro}
+                  style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', flex: 1 }}
+                />
+                <button
+                  onClick={async () => {
+                    // se já existe registro e não está em edição, entra em modo edição
+                    if (!adminEditingRegistro && clinica.donoId.registroProf) {
+                      setAdminEditingRegistro(true);
+                      return;
+                    }
+
+                    try {
+                      const resp = await api.patch('/api/users/me', { registroProf: clinica.donoId.registroProf });
+                      loadMembros();
+                      const updatedUser = resp.data.user;
+                      setMessage('Registro profissional salvo com sucesso!');
+                      localStorage.setItem('registroProf', updatedUser.registroProf || '');
+                      setAdminEditingRegistro(false);
+                      auth.refreshUserInfo();
+                    } catch (err) {
+                      console.error('Erro ao salvar registroProf:', err);
+                      setError('Não foi possível salvar o número de registro');
+                    }
+                  }}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#1E6B65', color: '#fff' }}
+                >{adminEditingRegistro || !clinica.donoId.registroProf ? 'Salvar' : 'Editar'}</button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
@@ -376,6 +441,20 @@ function ClinicaOnboarding() {
                   <option value="nutrologo">Nutrólogo</option>
                 </select>
               </label>
+              {formMembro.role !== 'recepcionista' && (
+                <label>
+                  Número de Registro Profissional
+                  <input
+                    type="text"
+                    name="registroProf"
+                    value={formMembro.registroProf}
+                    onChange={handleChangeMembro}
+                    required={formMembro.role !== 'recepcionista'}
+                    placeholder="Ex: CRM12345"
+                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                  />
+                </label>
+              )}
               <button
                 type="submit"
                 style={{
@@ -416,12 +495,22 @@ function ClinicaOnboarding() {
                       backgroundColor: membro.role === 'administrador' ? '#f0faf8' : '#fff'
                     }}
                   >
-                    <div>
-                      <strong>{membro.name}</strong>
-                      {membro.role === 'administrador' && (
-                        <p style={{ margin: '2px 0 0 0', color: '#1E6B65', fontSize: 12, fontWeight: 'bold' }}>👑 Criador da Clínica</p>
+                    <div style={{ flex: 1 }}>
+                      {editingMemberId === membro._id ? (
+                        <div style={{ display: 'grid', gap: 6 }}>
+                          <input style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc' }} value={editingMemberData.name} onChange={(e) => setEditingMemberData(prev => ({ ...prev, name: e.target.value }))} />
+                          <input style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc' }} value={editingMemberData.email} onChange={(e) => setEditingMemberData(prev => ({ ...prev, email: e.target.value }))} />
+                          <input style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc' }} value={editingMemberData.registroProf} onChange={(e) => setEditingMemberData(prev => ({ ...prev, registroProf: e.target.value }))} placeholder="Registro Profissional" />
+                        </div>
+                      ) : (
+                        <>
+                          <strong>{membro.name}</strong>
+                          {membro.role === 'administrador' && (
+                            <p style={{ margin: '2px 0 0 0', color: '#1E6B65', fontSize: 12, fontWeight: 'bold' }}>👑 Criador da Clínica</p>
+                          )}
+                          <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: 14 }}>{membro.email}{membro.registroProf ? ` • Reg.: ${membro.registroProf}` : ''}</p>
+                        </>
                       )}
-                      <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: 14 }}>{membro.email}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       <span style={{
@@ -434,23 +523,61 @@ function ClinicaOnboarding() {
                       }}>
                         {getRoleLabel(membro.role)}
                       </span>
-                      {membro.role !== 'administrador' && (
-                        <button
-                          onClick={() => handleDeleteMembro(membro._id, membro.name)}
-                          disabled={deletingMembroId === membro._id}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: 20,
-                            border: 'none',
-                            background: '#c0392b',
-                            color: '#fff',
-                            cursor: deletingMembroId === membro._id ? 'not-allowed' : 'pointer',
-                            opacity: deletingMembroId === membro._id ? 0.6 : 1,
-                            fontSize: 12
-                          }}
-                        >
-                          {deletingMembroId === membro._id ? 'Removendo...' : 'Remover'}
-                        </button>
+                      {editingMemberId === membro._id ? (
+                        <>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const payload = { email: editingMemberData.email, registroProf: editingMemberData.registroProf, name: editingMemberData.name };
+                                const resp = await api.patch(`/api/users/membros/${membro._id}`, payload);
+                                setMessageMembro('Membro atualizado com sucesso!');
+                                setEditingMemberId(null);
+                                setEditingMemberData({ email: '', registroProf: '', name: '' });
+                                if (localStorage.getItem('userId') === membro._id) {
+                                  if (resp.data.membro.registroProf) localStorage.setItem('registroProf', resp.data.membro.registroProf);
+                                  if (resp.data.membro.email) localStorage.setItem('userEmail', resp.data.membro.email);
+                                  auth.refreshUserInfo();
+                                }
+                                loadMembros();
+                              } catch (err) {
+                                console.error('Erro ao atualizar membro:', err);
+                                setErrorMembro('Não foi possível atualizar membro');
+                              }
+                            }}
+                            style={{ padding: '6px 12px', borderRadius: 20, border: 'none', background: '#2d8f6f', color: '#fff', cursor: 'pointer', fontSize: 12 }}
+                          >Salvar</button>
+                          <button onClick={() => { setEditingMemberId(null); setEditingMemberData({ email: '', registroProf: '', name: '' }); }} style={{ padding: '6px 12px', borderRadius: 20, border: 'none', background: '#ccc', color: '#222', cursor: 'pointer', fontSize: 12 }}>Cancelar</button>
+                        </>
+                      ) : (
+                        <>
+                          {membro.role !== 'administrador' && (
+                            <button
+                              onClick={() => handleDeleteMembro(membro._id, membro.name)}
+                              disabled={deletingMembroId === membro._id}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: 20,
+                                border: 'none',
+                                background: '#c0392b',
+                                color: '#fff',
+                                cursor: deletingMembroId === membro._id ? 'not-allowed' : 'pointer',
+                                opacity: deletingMembroId === membro._id ? 0.6 : 1,
+                                fontSize: 12
+                              }}
+                            >
+                              {deletingMembroId === membro._id ? 'Removendo...' : 'Remover'}
+                            </button>
+                          )}
+                          {localStorage.getItem('role') === 'administrador' && (
+                            <button
+                              onClick={() => {
+                                setEditingMemberId(membro._id);
+                                setEditingMemberData({ email: membro.email || '', registroProf: membro.registroProf || '', name: membro.name || '' });
+                              }}
+                              style={{ padding: '6px 12px', borderRadius: 20, border: 'none', background: '#1976d2', color: '#fff', cursor: 'pointer', fontSize: 12 }}
+                            >Editar</button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
