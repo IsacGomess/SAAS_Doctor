@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import api from "../../../services/api";
-import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
+import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
 
 function Login() {
@@ -25,7 +25,10 @@ function Login() {
             // Pega o nome do usuário de onde ele estiver no JSON
             const nomeUsuario = response.data.user?.name || response.data.name;
             localStorage.setItem('userName', nomeUsuario); 
-            
+            const registroProf = response.data.user?.registroProf;
+            if (registroProf) localStorage.setItem('registroProf', registroProf);
+            const userId = response.data.user?._id;
+            if (userId) localStorage.setItem('userId', userId);
             // Pega o clinicaId de onde ele estiver no JSON
             const idClinica = response.data.user?.clinicaId || response.data.clinicaId;
 
@@ -36,6 +39,8 @@ function Login() {
                 console.warn("[AUTH] O backend não enviou 'clinicaId' para este usuário.");
                 localStorage.removeItem('clinicaId');
             }
+            const role = response.data.user?.role;
+            if (role) localStorage.setItem('role', role);
 
             alert("Sucesso, Bem vindo !!");
             navigate("/dashboard"); // 🚀 Redireciona o usuário para dentro do sistema
@@ -105,6 +110,15 @@ function Login() {
                       <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-calendar2-plus ms-0 pe-4 "></i><strong style={{color:"white",fontSize:'20px'}}>Prontuários</strong></div>
                       <div>
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>Acesse e atualize os prontuários dos pacientes com rapidez e segurança.</p>
+                      </div>
+                    </div>
+
+                    <div className="benefit-item mt-4">
+                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-shield-check pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Segurança Jurídica</strong></div>
+                      <div>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>
+                          A solução ideal para Donos de clínicas ou Profissionais da saúde que querem manter segurança jurídica na evolução dos pacientes, acompanhamento personalizado com documentos de recomendações de saúde no status atual do atendimento.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -272,9 +286,9 @@ function Login() {
 
                   {/* Rodapé de Termos */}
                   <div style={{ textAlign: 'center', fontSize: '12px', color: '#6C757D', marginTop: '10px' }}>
-                    <span style={{ cursor: 'pointer' }}>Termos de Uso</span>
+                    <Link to="/termos-de-uso" style={{ cursor: 'pointer', color: '#6C757D', textDecoration: 'none' }}>Termos de Uso</Link>
                     <span style={{ margin: '0 8px' }}>|</span>
-                    <span style={{ cursor: 'pointer' }}>Política de Privacidade</span>
+                    <Link to="/politica-de-privacidade" style={{ cursor: 'pointer', color: '#6C757D', textDecoration: 'none' }}>Política de Privacidade</Link>
                   </div>
 
                 </div>

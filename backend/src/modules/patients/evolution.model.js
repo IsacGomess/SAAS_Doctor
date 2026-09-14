@@ -8,6 +8,11 @@ const evolutionSchema = new mongoose.Schema({
     description:{ type:mongoose.Schema.Types.String,ref: 'medical_records' }
     },
     evolutionText:{ type: String },
+    conduct:{ type: String },
+    patientRecommendations:{ type: String },
+    canceled: { type: Boolean, default: false },
+    canceledAt: { type: Date, default: null },
+    canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
 const Evolution = mongoose.models.Evolution || mongoose.model('Evolution', evolutionSchema, 'evolutions');

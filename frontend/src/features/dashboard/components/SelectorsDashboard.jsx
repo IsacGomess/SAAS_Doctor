@@ -1,6 +1,41 @@
+import React from "react";
 import { NavLink } from "react-router-dom";
 
 export function SelectorsDashboard() {
+    const role = localStorage.getItem('role') || '';
+    const [resolvedRole, setResolvedRole] = (typeof window !== 'undefined') ? [role, null] : [role, null];
+
+    // If role is not in localStorage, attempt to fetch current user
+    React.useEffect(() => {
+        if (!role) {
+            (async () => {
+                try {
+                    const res = await fetch('/api/users/me', { credentials: 'include' });
+                    if (res.ok) {
+                        const json = await res.json();
+                        const r = json.user?.role;
+                        if (r) {
+                            localStorage.setItem('role', r);
+                            window.location.reload();
+                        }
+                    }
+                } catch (err) {
+                    // ignore
+                }
+            })();
+        }
+    }, []);
+
+    const menuItems = [
+        { to: "/dashboard", label: "Dashboard", icon: "bi-house-door", end: true },
+        { to: "/dashboard/clinica", label: "Minha Clínica", icon: "bi-building" },
+        { to: "waiting-line", label: "Fila de Espera", icon: "bi-hourglass-split" },
+        { to: "clinic-schedule", label: "Agenda", icon: "bi-calendar2-plus" },
+        { to: "patients", label: "Pacientes", icon: "bi-people" },
+        // Relatórios visíveis apenas para administradores
+        ...(role === 'administrador' ? [{ to: "reports", label: "Relatórios", icon: "bi-bar-chart-line" }] : []),
+    ];
+
     return (
         <>
             <div
@@ -8,73 +43,24 @@ export function SelectorsDashboard() {
                 style={{ backgroundColor: "#FFFFFF" }}
             >
                 <i className="bi bi-lungs me-2"></i>
-                <p className="med mb-0">MED</p>
+                <p className="med mb-0 sidebar-brand-text">MED</p>
             </div>
 
             <div className="position-btn bg-white d-flex flex-column align-items-center">
-
-                <NavLink
-                    to="/dashboard"
-                    end
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-house-door icon-menu me-4"></i>
-                    <span>Dashboard</span>
-                </NavLink>
-
-                <NavLink
-                    to="/dashboard/clinica"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-building icon-menu me-4"></i>
-                    <span>Minha Clínica</span>
-                </NavLink>
-
-                <NavLink
-                    to="waiting-line"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-hourglass-split icon-menu me-4"></i>
-                    <span>Fila de Espera</span>
-                </NavLink>
-
-                <NavLink
-                    to="clinic-schedule"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-calendar2-plus icon-menu me-4"></i>
-                    <span>Agenda</span>
-                </NavLink>
-
-                <NavLink
-                    to="patients"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-people icon-menu me-4"></i>
-                    <span>Pacientes</span>
-                </NavLink>
-
-
-                <NavLink
-                    to="reports"
-                    className={({ isActive }) =>
-                        `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
-                    }
-                >
-                    <i className="bi bi-bar-chart-line icon-menu me-4"></i>
-                    <span>Relatórios</span>
-                </NavLink>
-
+                {menuItems.map((item) => (
+                    <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        title={item.label}
+                        className={({ isActive }) =>
+                            `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
+                        }
+                    >
+                        <i className={`bi ${item.icon} icon-menu me-4`}></i>
+                        <span className="sidebar-label">{item.label}</span>
+                    </NavLink>
+                ))}
             </div>
         </>
     );

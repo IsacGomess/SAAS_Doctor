@@ -23,6 +23,7 @@ const registerSchema = z.object({
     .trim()
     .min(4, 'Registro inválido')
     .max(15, 'Registro longo demais')
+    .optional()
 });
 
 const loginSchema = z.object({
@@ -49,8 +50,18 @@ const addMembroSchema = z.object({
   role: z.enum(['medico', 'enfermeiro', 'recepcionista', 'fisioterapeuta', 'nutricionista', 'esteticista', 'dentista', 'nutrologo'], {
     errorMap: () => ({ message: 'Cargo inválido. Aceitos: medico, enfermeiro, recepcionista, fisioterapeuta, nutricionista, esteticista, dentista, nutrologo' })
   })
+  , registroProf: z.string().trim().min(4, 'Registro inválido').max(15, 'Registro longo demais').optional()
 });
 
+// Caso o membro não seja recepcionista, o campo registroProf é obrigatório
+const addMembroSchemaWithRegistro = addMembroSchema.refine((data) => {
+  if (!data) return false;
+  if (data.role === 'recepcionista') return true;
+  return typeof data.registroProf === 'string' && data.registroProf.trim().length >= 4;
+}, {
+  message: 'registroProf é obrigatório para membros que não sejam recepcionistas',
+  path: ['registroProf']
+});
 const membroIdParamSchema = z.object({
   membroId: objectIdSchema
 });
@@ -76,6 +87,7 @@ module.exports = {
   registerSchema,
   loginSchema,
   addMembroSchema,
+  addMembroSchemaWithRegistro,
   membroIdParamSchema,
   forgotPasswordSchema,
   resetPasswordSchema

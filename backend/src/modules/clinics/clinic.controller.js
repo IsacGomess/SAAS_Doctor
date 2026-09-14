@@ -22,14 +22,26 @@ exports.createClinica = async (req, res) => {
             { expiresIn: '1h' }
         );
 
+        // set access token cookie so frontend can make authenticated requests immediately
+        const isProd = process.env.NODE_ENV === 'production';
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 1000
+        });
+
         return res.status(201).json({
             success: true,
             message: 'Clínica criada com sucesso/Clinic created successfully',
             clinica,
             accessToken,
             user: {
+                _id: user._id,
                 name: user.name,
-                clinicaId: user.clinicaId || null
+                clinicaId: user.clinicaId || null,
+                role: user.role || 'administrador',
+                registroProf: user.registroProf || null
             }
         });
     } catch (error) {

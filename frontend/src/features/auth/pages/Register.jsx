@@ -1,6 +1,6 @@
 import { useState } from "react";
 import api from "../../../services/api";
-import { useNavigate } from "react-router-dom"; // Importa o hook useNavigate
+import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
 
 function Register() {
@@ -8,15 +8,15 @@ function Register() {
     const [name,setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [registroProf, setregistroProf] = useState("");
+    // registroProf removed from public registration; can be added later in clinic area
     const navigate = useNavigate(); // Inicializa o hook useNavigate
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Envia os dados para a rota do backend
-            await api.post('/api/users/register', { name, email, password, registroProf });
+            // Envia os dados para a rota do backend (sem registro profissional)
+            await api.post('/api/users/register', { name, email, password });
 
             // 🔒 Como o backend não envia token no registro, removemos o bloco "if(response.data.token)" antigo daqui.
             localStorage.removeItem('token'); // Garante que não há lixo eletrônico de logins antigos
@@ -281,31 +281,7 @@ function Register() {
 
               {/* Campo Conselho */}
               <div className="col-md-6" style={{ textAlign: 'left' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#495057', marginBottom: '8px' }}>
-                  Registro do Conselho
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <span style={{ position: 'absolute', left: '16px', fontSize: '18px', zIndex: '5', pointerEvents: 'none' }}>
-                    
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="00000" 
-                    value={registroProf} 
-                    onChange={(e) => setregistroProf(e.target.value)} 
-                    required 
-                    style={{ 
-                      paddingLeft: '48px', 
-                      height: '50px', 
-                      borderRadius: '10px', 
-                      border: '1px solid #DEE2E6', 
-                      width: '100%',
-                      fontSize: '15px',
-                      backgroundColor: '#FFFFFF',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+              {/* Registro do conselho removido do cadastro público. Profissionais podem adicionar dentro da clínica. */}
               </div>
 
             </div>
@@ -347,9 +323,9 @@ function Register() {
 
           {/* Rodapé Institucional */}
           <div style={{ textAlign: 'center', fontSize: '12px', color: '#6C757D', marginTop: '20px' }}>
-            <span style={{ cursor: 'pointer' }}>Termos de Uso</span>
+            <Link to="/termos-de-uso" style={{ cursor: 'pointer', color: '#6C757D', textDecoration: 'none' }}>Termos de Uso</Link>
             <span style={{ margin: '0 8px' }}>|</span>
-            <span style={{ cursor: 'pointer' }}>Política de Privacidade</span>
+            <Link to="/politica-de-privacidade" style={{ cursor: 'pointer', color: '#6C757D', textDecoration: 'none' }}>Política de Privacidade</Link>
           </div>
 
         </div> 

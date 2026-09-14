@@ -39,7 +39,7 @@ exports.authenticateToken = async (req, res, next) => {
 
         // 5. Busca o estado ATUAL do usuário no banco
         const user = await User.findById(decoded.userId)
-        .select('_id name clinicaId role isActive tokenVersion');
+        .select('_id name clinicaId role registroProf isActive tokenVersion');
 
         // Usuário removido ou desativado
         if (!user || !user.isActive) {
@@ -63,7 +63,8 @@ exports.authenticateToken = async (req, res, next) => {
             userId: user._id,
             name: user.name,
             clinicaId: user.clinicaId || null,
-            role: user.role
+            role: user.role,
+            registroProf: user.registroProf || null
         };
 
         next();

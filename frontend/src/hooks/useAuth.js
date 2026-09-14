@@ -66,6 +66,7 @@ export const useAuth = () => {
             localStorage.removeItem('userName');
             localStorage.removeItem('clinicArea');
             localStorage.removeItem('clinicaId');
+            localStorage.removeItem('registroProf');
             
             // Reseta estados do React
             setUserId(null);
@@ -79,7 +80,40 @@ export const useAuth = () => {
     }, []);
 
     // Função para atualizar informações do usuário de forma reativa
-    const refreshUserInfo = useCallback(() => {
+    const refreshUserInfo = useCallback(async () => {
+        try {
+            // Primeiro tenta recuperar informações do servidor (cookie de sessão)
+            const res = await fetch('/api/users/me', { credentials: 'include' });
+            if (res.ok) {
+                const json = await res.json();
+                const u = json.user || {};
+                if (u.name) {
+                    localStorage.setItem('userName', u.name);
+                }
+                if (u.clinicaId) {
+                    localStorage.setItem('clinicaId', u.clinicaId);
+                }
+                if (u.role) {
+                    localStorage.setItem('role', u.role);
+                }
+                if (u.registroProf) {
+                    localStorage.setItem('registroProf', u.registroProf);
+                }
+                if (u._id) {
+                    localStorage.setItem('userId', u._id);
+                }
+
+                setUserName(u.name || localStorage.getItem('userName'));
+                setClinicaId(u.clinicaId || localStorage.getItem('clinicaId'));
+                setClinicArea(localStorage.getItem('clinicArea'));
+                setIsAuthenticated(!!(u.name || localStorage.getItem('userName')));
+                setUserId(u._id || null);
+                return;
+            }
+        } catch (err) {
+            // fallback para leitura do localStorage
+        }
+
         const storedName = localStorage.getItem('userName');
         const storedClinicId = localStorage.getItem('clinicaId');
         const storedArea = localStorage.getItem('clinicArea');
