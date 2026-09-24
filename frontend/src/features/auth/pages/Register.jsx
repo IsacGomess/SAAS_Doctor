@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api from "../../../services/api";
 import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
-import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
+import avatar from "../../../images/login-image.webp"; // Importa a imagem do avatar
 
 function Register() {
     const [loading, setLoading] = useState(false);
@@ -98,8 +98,8 @@ function Register() {
               🌍
             </div>
             <div>
-              <strong style={{ display: 'block', fontSize: '16px', marginBottom: '4px' }}>Prontuário Digital</strong>
-              <p style={{ fontSize: '14px', opacity: '0.75', margin: 0 }}>Acesse o histórico de seus pacientes de qualquer lugar.</p>
+              <strong style={{ display: 'block', fontSize: '16px', marginBottom: '4px' }}>Mais tempo para Você </strong>
+              <p style={{ fontSize: '14px', opacity: '0.75', margin: 0 }}>Acesse o histórico de seus pacientes de qualquer lugar, a qualquer momento. </p>
             </div>
           </div>
           
@@ -118,8 +118,8 @@ function Register() {
               ⚡
             </div>
             <div>
-              <strong style={{ display: 'block', fontSize: '16px', marginBottom: '4px' }}>Organização no Diagnóstico</strong>
-              <p style={{ fontSize: '14px', opacity: '0.75', margin: 0 }}>Ferramentas inteligentes para o dia a dia clínico.</p>
+              <strong style={{ display: 'block', fontSize: '16px', marginBottom: '4px' }}>Aumente sua produtividade</strong>
+              <p style={{ fontSize: '14px', opacity: '0.75', margin: 0 }}>Visualize ganhos assim que confirmar que paciente foi atendido.</p>
             </div>
           </div>
         </div>

@@ -2,12 +2,12 @@ const express = require('express');
 const routes = express.Router();
 const reportsController = require('./report.controller.js');
 const authMiddleware = require('../../middlewares/auth.js');
+const requireActiveSubscription = require('../../middlewares/requireActiveSubscription.js');
 const limiter = require('../../middlewares/rate-limit.js');
 
 // 1. Aplica os middlewares globais para todo este grupo de rotas
 routes.use(authMiddleware.authenticateToken);
-routes.use(limiter.generalLimiter);
-
+routes.use(requireActiveSubscription);
 
 // Todas as rotas passam pelo middleware que lê o cookie de sessão seguro
 routes.get('/appointments-monthly',  reportsController.getAppointmentsMonthly);

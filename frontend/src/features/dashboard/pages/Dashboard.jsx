@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom"; 
 import { NavBar } from "../components/NavBar";
 import { SelectorsDashboard } from "../components/SelectorsDashboard";
@@ -6,6 +6,26 @@ import { SelectorsDashboard } from "../components/SelectorsDashboard";
 function Dashboard() {
     const [username, setUserName] = useState(localStorage.getItem("userName") || ""); 
     const [registroProf, setRegistroProf] = useState(localStorage.getItem("registroProf") || "");
+    const [clinicName, setClinicName] = useState(localStorage.getItem("clinicName") || "");
+
+    useEffect(() => {
+        const syncProfileHeader = () => {
+            setUserName(localStorage.getItem("userName") || "");
+            setRegistroProf(localStorage.getItem("registroProf") || "");
+            setClinicName(localStorage.getItem("clinicName") || "");
+        };
+
+        const handleStorage = () => syncProfileHeader();
+        const handleProfileUpdated = () => syncProfileHeader();
+
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('user-profile-updated', handleProfileUpdated);
+
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('user-profile-updated', handleProfileUpdated);
+        };
+    }, []);
 
     return (
         // vh-100 força o container pai a ocupar exatamente a altura da tela inteira
@@ -33,7 +53,7 @@ function Dashboard() {
 
             <div className="vh-100 d-flex flex-column pt-5 ps-1 w-100" style={{ backgroundColor: '#F0F4F3', minHeight: '100vh' }}>
                 {/* 1. Barra superior do topo */}
-                <NavBar userName={username} registroProf={registroProf} />
+                <NavBar userName={username} registroProf={registroProf} clinicName={clinicName} />
 
                 {/* 2. Área principal (Menu Lateral + Conteúdo da Direita) */}
                 <div className="d-flex flex-grow-1 ps-3 m-0" style={{ minHeight: 0 }}>

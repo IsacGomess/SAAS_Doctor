@@ -3,6 +3,7 @@ const Appointment = require('../appointments/appointment.model.js'); // Ajuste o
 const Patient = require('../patients/patient.model.js');
 const WaitingLine = require('../waiting-line/waiting-line.model.js'); // Ajuste o caminho se houver módulo específico
 const Convenio = require('../convenios/convenio.model.js');
+const User = require('../users/user.model.js');
 
 class ReportsService {
     // 📊 Gráfico A: Volume Mensal de Agendamentos (Por Status)
@@ -158,7 +159,7 @@ class ReportsService {
         }));
     }
 
-    async getDashboardSummary(clinicaId) {
+    async getDashboardSummary(clinicaId, userId, subscriptionPlan = null) {
         try {
             const today = new Date();
             const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
@@ -174,7 +175,17 @@ class ReportsService {
             endOfWeek.setDate(startOfWeek.getDate() + 6);
             endOfWeek.setHours(23, 59, 59, 999);
 
-            const clinicObjectId = new mongoose.Types.ObjectId(clinicaId);
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            const startOfFourMonthsWindow = new Date(today.getFullYear(), today.getMonth() - 3, 1, 0, 0, 0, 0);
+            const endOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            const clinicObjectId = clinicaId ? new mongoose.Types.ObjectId(clinicaId) : null;
+            const professionalObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+            const scopeFilter = clinicObjectId
+                ? { clinicaId: clinicObjectId }
+                : { clinicaId: null, profissionalId: professionalObjectId };
             const next7Start = new Date(today);
             next7Start.setDate(today.getDate() + 1);
             next7Start.setHours(0, 0, 0, 0);
@@ -190,11 +201,11 @@ class ReportsService {
             const last7End = new Date(today);
             last7End.setHours(23, 59, 59, 999);
 
-            const [todayAppointments, weekMetrics, newPatientsThisWeek, next7DaysAppointments, last7DaysAppointments, agendaToday, weeklyAppointmentsByDay] = await Promise.all([
+            const [todayAppointments, weekMetrics, newPatientsThisWeek, next7DaysAppointments, last7DaysAppointments, agendaToday, weeklyAppointmentsByDay, weeklyStatusByDay] = await Promise.all([
                 Appointment.aggregate([
                     {
                         $match: {
-                            clinicaId: clinicObjectId,
+                            ...scopeFilter,
                             appointmentDate: { $gte: startOfDay, $lte: endOfDay }
                         }
                     },
@@ -208,30 +219,26 @@ class ReportsService {
                 WaitingLine.aggregate([
                     {
                         $match: {
-                            clinicaId: clinicObjectId,
+                            ...(clinicObjectId ? { clinicaId: clinicObjectId } : { assignedTo: professionalObjectId }),
                             checkInAt: { $gte: startOfWeek, $lte: endOfWeek }
                         }
                     },
                     {
                         $group: {
                             _id: null,
-                            atendidos: {
-                                $sum: { $cond: [{ $eq: ["$status", "finalizado"] }, 1, 0] }
-                            },
-                            cancelados: {
-                                $sum: { $cond: [{ $eq: ["$status", "cancelado"] }, 1, 0] }
-                            }
+                            atendidos: { $sum: { $cond: [{ $eq: ["$status", "atendido"] }, 1, 0] } },
+                            cancelados: { $sum: { $cond: [{ $eq: ["$status", "cancelado"] }, 1, 0] } }
                         }
                     }
                 ]),
                 Patient.countDocuments({
-                    clinicaId: clinicObjectId,
+                    ...(clinicObjectId ? { clinicaId: clinicObjectId } : { profissionalId: professionalObjectId }),
                     createdAt: { $gte: startOfWeek, $lte: endOfWeek }
                 }),
                 Appointment.aggregate([
                     {
                         $match: {
-                            clinicaId: clinicObjectId,
+                            ...scopeFilter,
                             appointmentDate: { $gte: next7Start, $lte: next7End }
                         }
                     },
@@ -246,7 +253,7 @@ class ReportsService {
                 Appointment.aggregate([
                     {
                         $match: {
-                            clinicaId: clinicObjectId,
+                            ...scopeFilter,
                             appointmentDate: { $gte: last7Start, $lte: last7End }
                         }
                     },
@@ -259,7 +266,7 @@ class ReportsService {
                     }
                 ]),
                 Appointment.find({
-                    clinicaId: clinicObjectId,
+                    ...scopeFilter,
                     appointmentDate: { $gte: startOfDay, $lte: endOfDay }
                 })
                 .populate('patientId', 'name')
@@ -268,7 +275,7 @@ class ReportsService {
                 Appointment.aggregate([
                     {
                         $match: {
-                            clinicaId: clinicObjectId,
+                            ...scopeFilter,
                             appointmentDate: { $gte: startOfWeek, $lte: endOfWeek },
                             status: { $ne: 'cancelado' }
                         }
@@ -277,6 +284,23 @@ class ReportsService {
                         $group: {
                             // MongoDB: domingo = 1, segunda = 2, ..., sábado = 7.
                             _id: { $dayOfWeek: '$appointmentDate' },
+                            total: { $sum: 1 }
+                        }
+                    }
+                ]),
+                Appointment.aggregate([
+                    {
+                        $match: {
+                            ...scopeFilter,
+                            appointmentDate: { $gte: startOfWeek, $lte: endOfWeek }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: {
+                                dayOfWeek: { $dayOfWeek: '$appointmentDate' },
+                                status: '$status'
+                            },
                             total: { $sum: 1 }
                         }
                     }
@@ -295,7 +319,14 @@ class ReportsService {
             const occupancyNext7Days = totalNext7Days > 0 ? Math.round((occupiedNext7Days / totalNext7Days) * 100) : 0;
             const occupancyLast7Days = totalLast7Days > 0 ? Math.round((occupiedLast7Days / totalLast7Days) * 100) : 0;
 
-            return {
+            const weeklyStatusByDayMapped = weeklyStatusByDay.map((item) => ({
+                dayOfWeek: item._id.dayOfWeek,
+                status: item._id.status,
+                total: item.total
+            }));
+
+            const baseSummary = {
+                dashboardPlan: subscriptionPlan,
                 consultasHoje: metricsToday.total,
                 novosPacientesSemana: newPatientsThisWeek,
                 atendidosSemana: metricsWeek.atendidos,
@@ -306,6 +337,7 @@ class ReportsService {
                     dayOfWeek: item._id,
                     total: item.total
                 })),
+                weeklyStatusByDay: weeklyStatusByDayMapped,
                 agendaHoje: agendaToday.map(item => ({
                     _id: item._id,
                     patientName: item.patientId?.name || 'Paciente sem nome',
@@ -313,6 +345,111 @@ class ReportsService {
                     status: item.status,
                     notes: item.notes || ''
                 }))
+            };
+
+            if (subscriptionPlan !== 'professional') {
+                return baseSummary;
+            }
+
+            const user = await User.findById(userId).select('valorParticularPadrao').lean();
+            const defaultPrice = user?.valorParticularPadrao;
+            const hasProfessionalPrice = defaultPrice !== null && defaultPrice !== undefined;
+
+            const topPatientsRaw = await Appointment.aggregate([
+                {
+                    $match: {
+                        ...scopeFilter,
+                        status: 'atendido',
+                        appointmentDate: { $gte: startOfMonth, $lte: endOfMonth }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'patients',
+                        localField: 'patientId',
+                        foreignField: '_id',
+                        as: 'patient'
+                    }
+                },
+                { $unwind: { path: '$patient', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: '$patientId',
+                        patientName: { $first: '$patient.name' },
+                        totalAtendimentos: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalAtendimentos: -1, patientName: 1 } },
+                { $limit: 5 }
+            ]);
+
+            const topPatientsMonth = topPatientsRaw.map((item) => {
+                const fullName = String(item.patientName || 'Paciente sem nome').trim();
+                const nameParts = fullName.split(/\s+/).filter(Boolean);
+                const shortName = nameParts.length >= 2
+                    ? `${nameParts[0]} ${nameParts[1]}`
+                    : (nameParts[0] || 'Paciente sem nome');
+
+                return {
+                    patientId: item._id,
+                    patientName: shortName,
+                    atendimentos: item.totalAtendimentos,
+                    estimativa: hasProfessionalPrice ? Number((item.totalAtendimentos * defaultPrice).toFixed(2)) : null
+                };
+            });
+
+            const attendedByMonthRaw = await Appointment.aggregate([
+                {
+                    $match: {
+                        ...scopeFilter,
+                        status: 'atendido',
+                        appointmentDate: { $gte: startOfFourMonthsWindow, $lte: endOfCurrentMonth }
+                    }
+                },
+                {
+                    $project: {
+                        year: { $year: '$appointmentDate' },
+                        month: { $month: '$appointmentDate' }
+                    }
+                },
+                {
+                    $group: {
+                        _id: { year: '$year', month: '$month' },
+                        atendimentos: { $sum: 1 }
+                    }
+                },
+                { $sort: { '_id.year': 1, '_id.month': 1 } }
+            ]);
+
+            const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
+            const attendedByKey = new Map(
+                attendedByMonthRaw.map((row) => {
+                    const key = `${row._id.year}-${String(row._id.month).padStart(2, '0')}`;
+                    return [key, row.atendimentos];
+                })
+            );
+
+            const recentFourMonths = [];
+            for (let offset = 3; offset >= 0; offset -= 1) {
+                const monthDate = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+                const key = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+                const atendimentos = attendedByKey.get(key) || 0;
+
+                recentFourMonths.push({
+                    mes: key,
+                    label: monthFormatter.format(monthDate).replace('.', ''),
+                    atendimentos,
+                    estimativa: hasProfessionalPrice ? Number((atendimentos * defaultPrice).toFixed(2)) : null
+                });
+            }
+
+            return {
+                ...baseSummary,
+                professionalDefaultPrice: hasProfessionalPrice ? defaultPrice : null,
+                professionalHasPrice: hasProfessionalPrice,
+                professionalTopPatientsMonth: topPatientsMonth,
+                professionalReturnsByMonth: recentFourMonths,
+                professionalFinancialDisclaimer: 'Estimativa baseada no valor particular padrão configurado em Meus dados profissionais.'
             };
         } catch (error) {
             console.error('Erro ao gerar resumo do dashboard:', error);

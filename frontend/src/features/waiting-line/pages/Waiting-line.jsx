@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useWaitingLine } from '../services/useWaitingLine';
@@ -12,11 +12,42 @@ function WaitingLine() {
   const navigate = useNavigate();
   const auth = useAuth(); // arquivos de autenticaçao global criados em jwt
   const selectedClinicArea = auth.clinicArea || DEFAULT_CLINIC_AREA;
+  const [clinicName, setClinicName] = useState(() => localStorage.getItem('clinicName') || '');
   const waitingLine = useWaitingLine({
     clinicArea: selectedClinicArea,
     pollInterval: null,
     assignedUserId: auth.userId
   });
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadClinicName = async () => {
+      if (!auth.clinicaId) {
+        if (mounted) setClinicName(localStorage.getItem('clinicName') || '');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/clinics/me', { credentials: 'include' });
+        if (response.ok) {
+          const clinicJson = await response.json();
+          const resolvedName = clinicJson?.clinica?.name || localStorage.getItem('clinicName') || '';
+          if (mounted) setClinicName(resolvedName);
+          if (resolvedName) localStorage.setItem('clinicName', resolvedName);
+          else localStorage.removeItem('clinicName');
+          return;
+        }
+      } catch (error) {
+        console.warn('[WAITING_LINE] falha ao buscar nome da clínica:', error);
+      }
+
+      if (mounted) setClinicName(localStorage.getItem('clinicName') || '');
+    };
+
+    loadClinicName();
+    return () => { mounted = false; };
+  }, [auth.clinicaId]);
 
   const [clinicAreaInput, setClinicAreaInput] = useState('');
   const [showClinicAreaModal, setShowClinicAreaModal] = useState(false);
@@ -74,8 +105,11 @@ function WaitingLine() {
       {/* CABEÇALHO */}
       <div className="dashboard-header">
         <div className="header-top">
-          <h3>Gerenciamento de Fila de Espera</h3>
-          <p className="greeting">Bem-vindo, Dr. {auth.userName.toUpperCase()}</p>
+          <h3>
+            Gerenciamento de Fila de Espera 
+            {clinicName ? ` - ${clinicName.toUpperCase()}` : ''}
+          </h3>
+          <p className="greeting">{'Assinatura Clínica'}</p>
         </div>
 
         <div className="header-controls">

@@ -17,15 +17,23 @@ exports.create = async (req, res) => {
             return res.status(401).json({ success: false, message: "Usuário não autenticado." });
         }
 
-        const newAppointment = await AppointmentService.createAppointment(req.body, userId, clinicaId);
+        const result = await AppointmentService.createAppointment(req.body, userId, clinicaId);
+        const appointments = result?.appointments || [];
+        const recurrence = result?.recurrence || { enabled: false };
         
         return res.status(201).json({
             success: true,
-            message: "Agendamento realizado com sucesso!",
-            appointment: newAppointment
+            message: recurrence.enabled
+                ? `Agendamentos recorrentes criados com sucesso (${appointments.length} ocorrências).`
+                : "Agendamento realizado com sucesso!",
+            appointment: appointments[0] || null,
+            appointments,
+            createdCount: appointments.length,
+            recurrence
         });
     } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
+        const statusCode = error?.statusCode || 500;
+        return res.status(statusCode).json({ success: false, error: error.message });
     }
 };
 

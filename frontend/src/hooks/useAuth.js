@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api'; 
+import api, { loadCsrfToken, clearCsrfToken } from '../services/api'; 
 
 /**
  * Hook personalizado para gerenciar estado de autenticação
@@ -16,9 +16,59 @@ export const useAuth = () => {
 
     // Inicializa o estado de autenticação ao montar o componente
     useEffect(() => {
-        const initializeAuth = () => {
+        const initializeAuth = async () => {
             try {
-                // 🚀 MUDANÇA REAL: Lemos direto do LocalStorage os dados salvos no Login
+                // Tenta validar sessão no servidor usando cookie (credentials: include)
+                const res = await fetch('/api/users/me', { credentials: 'include' });
+                if (res.ok) {
+                    const json = await res.json();
+                    const u = json.user || {};
+                    const effectiveRegistroProf = u.registroProf || u.numeroRegistroProfissional || '';
+                    let clinicName = u.clinicName || u.clinicaName || '';
+
+                    if (u.clinicaId) {
+                        localStorage.setItem('clinicaId', u.clinicaId);
+                        try {
+                            const clinicResponse = await fetch('/api/clinics/me', { credentials: 'include' });
+                            if (clinicResponse.ok) {
+                                const clinicJson = await clinicResponse.json();
+                                clinicName = clinicJson?.clinica?.name || clinicName;
+                            }
+                        } catch (err) {
+                            console.warn('[AUTH] falha ao buscar nome da clínica para a navbar');
+                        }
+                    }
+
+                    if (u.name) localStorage.setItem('userName', u.name);
+                    if (u.role) localStorage.setItem('role', u.role);
+                    if (effectiveRegistroProf) localStorage.setItem('registroProf', effectiveRegistroProf);
+                    else localStorage.removeItem('registroProf');
+                    if (u._id) localStorage.setItem('userId', u._id);
+                    if (clinicName) localStorage.setItem('clinicName', clinicName);
+                    else localStorage.removeItem('clinicName');
+
+                    setUserName(u.name || localStorage.getItem('userName'));
+                    setClinicaId(u.clinicaId || localStorage.getItem('clinicaId'));
+                    setClinicArea(localStorage.getItem('clinicArea'));
+                    setUserId(u._id || null);
+                    setIsAuthenticated(!!(u.name || localStorage.getItem('userName')));
+
+                    // Após confirmar sessão válida, restaura CSRF em memória
+                    try {
+                        await loadCsrfToken();
+                    } catch (err) {
+                        console.warn('[CSRF] falha ao restaurar token na inicialização');
+                    }
+
+                    setIsLoading(false);
+                    return;
+                }
+            } catch (error) {
+                // Falha ao contatar servidor, faremos fallback para storage
+            }
+
+            // Fallback: usa dados cosméticos do localStorage sem garantir sessão
+            try {
                 const storedName = localStorage.getItem('userName');
                 const storedClinicId = localStorage.getItem('clinicaId');
                 const storedArea = localStorage.getItem('clinicArea');
@@ -32,17 +82,15 @@ export const useAuth = () => {
                 setUserName(storedName);
                 setClinicaId(storedClinicId);
                 setClinicArea(storedArea);
-                
-                // Como o cookie já está injetado pelo back, o front assume a autenticação
-                setIsAuthenticated(true); 
-            } catch (error) {
-                console.error('Erro ao inicializar autenticação:', error);
+                setIsAuthenticated(true);
+            } catch (err) {
+                console.error('Erro ao inicializar autenticação:', err);
                 setIsAuthenticated(false);
             } finally {
                 setIsLoading(false);
             }
         };
-        
+
         initializeAuth();
     }, []);
 
@@ -57,25 +105,32 @@ export const useAuth = () => {
     // Função de logout (Avisa o backend para limpar os cookies)
     const logout = useCallback(async () => {
         try {
-            await api.post('/api/users/logout'); 
+            await api.post('/api/users/logout');
+            // Limpa CSRF em memória no cliente
+            try {
+                clearCsrfToken();
+            } catch (err) {
+                console.warn('[CSRF] falha ao limpar token localmente', err);
+            }
         } catch (error) {
             console.error('Erro ao limpar cookies no servidor durante o logout:', error);
         } finally {
             // Limpa o lixo eletrônico do localStorage
-            localStorage.removeItem('token'); 
+            localStorage.removeItem('token');
             localStorage.removeItem('userName');
             localStorage.removeItem('clinicArea');
             localStorage.removeItem('clinicaId');
+            localStorage.removeItem('clinicName');
             localStorage.removeItem('registroProf');
-            
+
             // Reseta estados do React
             setUserId(null);
             setUserName(null);
             setClinicArea(null);
             setClinicaId(null);
             setIsAuthenticated(false);
-            
-            window.location.href = '/login';
+
+            window.location.href = '/';
         }
     }, []);
 
@@ -87,20 +142,38 @@ export const useAuth = () => {
             if (res.ok) {
                 const json = await res.json();
                 const u = json.user || {};
+                const effectiveRegistroProf = u.registroProf || u.numeroRegistroProfissional || '';
+                let clinicName = u.clinicName || u.clinicaName || '';
                 if (u.name) {
                     localStorage.setItem('userName', u.name);
                 }
                 if (u.clinicaId) {
                     localStorage.setItem('clinicaId', u.clinicaId);
+                    try {
+                        const clinicResponse = await fetch('/api/clinics/me', { credentials: 'include' });
+                        if (clinicResponse.ok) {
+                            const clinicJson = await clinicResponse.json();
+                            clinicName = clinicJson?.clinica?.name || clinicName;
+                        }
+                    } catch (err) {
+                        console.warn('[AUTH] falha ao atualizar nome da clínica para a navbar');
+                    }
                 }
                 if (u.role) {
                     localStorage.setItem('role', u.role);
                 }
-                if (u.registroProf) {
-                    localStorage.setItem('registroProf', u.registroProf);
+                if (effectiveRegistroProf) {
+                    localStorage.setItem('registroProf', effectiveRegistroProf);
+                } else {
+                    localStorage.removeItem('registroProf');
                 }
                 if (u._id) {
                     localStorage.setItem('userId', u._id);
+                }
+                if (clinicName) {
+                    localStorage.setItem('clinicName', clinicName);
+                } else {
+                    localStorage.removeItem('clinicName');
                 }
 
                 setUserName(u.name || localStorage.getItem('userName'));

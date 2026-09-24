@@ -56,11 +56,9 @@ class ReportsController {
 
     async getDashboardSummary(req, res, next) {
         try {
-            const { clinicaId, role } = req.user;
-            if (!clinicaId) return res.status(400).json({ message: 'Clínica não associada ao usuário.' });
-            if (role !== 'administrador') return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem visualizar estatísticas.' });
-
-            const data = await reportsService.getDashboardSummary(clinicaId);
+            const { clinicaId } = req.user;
+            const subscriptionPlan = req?.subscription?.plan || null;
+            const data = await reportsService.getDashboardSummary(clinicaId, req.userId, subscriptionPlan);
             return res.json(data);
         } catch (error) {
             next(error);
