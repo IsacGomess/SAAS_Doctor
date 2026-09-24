@@ -11,10 +11,17 @@ const appointmentSchema = new mongoose.Schema({
         enum: ['agendado', 'confirmado', 'cancelado', 'atendido'], 
         default: 'agendado' 
     },
-    notes: { type: String, default: '' }
+    notes: { type: String, default: '' },
+    recurrenceSeriesId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    recurrencePattern: {
+        type: String,
+        enum: ['none', 'weekly'],
+        default: 'none'
+    }
 }, { timestamps: true });
 
 appointmentSchema.index({ clinicaId: 1, status: 1, appointmentDate: 1 });
+appointmentSchema.index({ recurrenceSeriesId: 1, appointmentDate: 1 });
 
 const Appointment = mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema, 'appointments');
 

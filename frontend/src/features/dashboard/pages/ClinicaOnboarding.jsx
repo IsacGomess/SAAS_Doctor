@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import api from '../../../services/api';
 import { addMembro, getMembros, deleteMembro } from '../../clinic/hooks/membroService';
+import { getSubscription } from '../../../services/billing';
 
 function ClinicaOnboarding() {
   const auth = useAuth();
   const [clinica, setClinica] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(true);
+  const [subscriptionPlan, setSubscriptionPlan] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [membros, setMembros] = useState([]);
   const [isLoadingMembros, setIsLoadingMembros] = useState(false);
@@ -41,6 +44,86 @@ function ClinicaOnboarding() {
   const [messageConvenio, setMessageConvenio] = useState(null);
   const [errorConvenio, setErrorConvenio] = useState(null);
   const [togglingConvenioId, setTogglingConvenioId] = useState(null);
+  const [savingProfessionalData, setSavingProfessionalData] = useState(false);
+  const [professionalForm, setProfessionalForm] = useState({
+    profissao: '',
+    conselhoProfissional: '',
+    conselhoUf: '',
+    numeroRegistroProfissional: '',
+    valorParticularPadrao: ''
+  });
+
+  const formatCurrencyFromCents = (value) => {
+    const number = Number(value || 0);
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(number / 100);
+  };
+
+  const buildMemberBillingMessage = (billing) => {
+    if (!billing) return 'Membro adicionado com sucesso!';
+
+    if (billing.extraProfessionals > 0) {
+      const ciclo = billing.billingCycleLabel || 'próximo ciclo';
+      const valor = formatCurrencyFromCents(billing.monthlyPriceCents || 0);
+      return `Membro adicionado com sucesso! Há ${billing.extraProfessionals} profissional(is) adicional(is) acima do limite de 5. Cobrança de ${valor} no ${ciclo}.`;
+    }
+
+    return 'Membro adicionado com sucesso! Dentro do limite de cinco profissionais incluídos.';
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPlan = async () => {
+      setIsLoadingPlan(true);
+      try {
+        const response = await getSubscription();
+        if (!mounted) return;
+        setSubscriptionPlan(response?.subscription?.plan || null);
+      } catch (err) {
+        if (!mounted) return;
+        setSubscriptionPlan(null);
+      } finally {
+        if (mounted) setIsLoadingPlan(false);
+      }
+    };
+
+    loadPlan();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProfessionalData = async () => {
+      try {
+        const response = await api.get('/api/users/me');
+        if (!mounted || !response?.data?.user) return;
+
+        const user = response.data.user;
+        setProfessionalForm({
+          profissao: user.profissao || '',
+          conselhoProfissional: user.conselhoProfissional || '',
+          conselhoUf: user.conselhoUf || '',
+          numeroRegistroProfissional: user.numeroRegistroProfissional || user.registroProf || '',
+          valorParticularPadrao: user.valorParticularPadrao ?? ''
+        });
+      } catch (err) {
+        console.error('Erro ao carregar dados profissionais:', err);
+      }
+    };
+
+    loadProfessionalData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Carregar clínica
   useEffect(() => {
@@ -128,6 +211,12 @@ function ClinicaOnboarding() {
           localStorage.setItem('clinicaId', clinicaId);
           console.log('Clínica criada com ID:', clinicaId);
         }
+
+        const clinicName = response.data.clinica?.name || form.name || '';
+        if (clinicName) {
+          localStorage.setItem('clinicName', clinicName);
+        }
+
         // store role and userId/registroProf so UI updates immediately
         if (response.data.user?.role) localStorage.setItem('role', response.data.user.role);
         if (response.data.user?._id) localStorage.setItem('userId', response.data.user._id);
@@ -168,7 +257,8 @@ function ClinicaOnboarding() {
       const data = await addMembro(formMembro);
       console.log('✅ Membro adicionado com sucesso:', data);
       setFormMembro({ name: '', email: '', password: '', role: 'recepcionista', registroProf: '' });
-      setMessageMembro('Membro adicionado com sucesso!');
+      await auth.refreshUserInfo();
+      setMessageMembro(buildMemberBillingMessage(data?.billing));
       loadMembros();
     } catch (err) {
       console.error('❌ Erro ao adicionar membro:', err);
@@ -184,9 +274,12 @@ function ClinicaOnboarding() {
 
     setDeletingMembroId(membroId);
     try {
-      await deleteMembro(membroId);
-      console.log('✅ Membro removido com sucesso:', membroId);
-      setMessageMembro('Membro removido com sucesso!');
+      const data = await deleteMembro(membroId);
+      console.log('✅ Membro removido com sucesso:', membroId, data);
+      await auth.refreshUserInfo();
+      setMessageMembro(data?.billing?.extraProfessionals > 0
+        ? `Membro removido com sucesso! O plano voltou para ${data.billing.extraProfessionals} profissional(is) adicional(is) acima do limite.`
+        : 'Membro removido com sucesso!');
       loadMembros();
     } catch (err) {
       console.error('❌ Erro ao remover membro:', err);
@@ -251,14 +344,165 @@ function ClinicaOnboarding() {
     return labels[role] || role;
   };
 
+  const handleProfessionalFieldChange = (event) => {
+    const { name, value } = event.target;
+    setProfessionalForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveProfessionalData = async (event) => {
+    event.preventDefault();
+    setMessage(null);
+    setError(null);
+
+    const normalizedValue = professionalForm.valorParticularPadrao === ''
+      ? null
+      : Number(String(professionalForm.valorParticularPadrao).replace(',', '.'));
+
+    if (normalizedValue !== null && (Number.isNaN(normalizedValue) || normalizedValue < 0)) {
+      setError('Valor particular padrão deve ser um número não negativo.');
+      return;
+    }
+
+    const payload = {
+      profissao: professionalForm.profissao.trim() || null,
+      conselhoProfissional: professionalForm.conselhoProfissional.trim() || null,
+      conselhoUf: professionalForm.conselhoUf.trim().toUpperCase() || null,
+      numeroRegistroProfissional: professionalForm.numeroRegistroProfissional.trim() || null,
+      registroProf: professionalForm.numeroRegistroProfissional.trim() || null,
+      valorParticularPadrao: normalizedValue
+    };
+
+    setSavingProfessionalData(true);
+    try {
+      const response = await api.patch('/api/users/me', payload);
+      const user = response?.data?.user || {};
+      const resolvedRegistroProf = user.registroProf || user.numeroRegistroProfissional || '';
+
+      setProfessionalForm((prev) => ({
+        ...prev,
+        profissao: user.profissao || '',
+        conselhoProfissional: user.conselhoProfissional || '',
+        conselhoUf: user.conselhoUf || '',
+        numeroRegistroProfissional: user.numeroRegistroProfissional || user.registroProf || '',
+        valorParticularPadrao: user.valorParticularPadrao ?? ''
+      }));
+
+      if (resolvedRegistroProf) {
+        localStorage.setItem('registroProf', resolvedRegistroProf);
+      } else {
+        localStorage.removeItem('registroProf');
+      }
+
+      if (user.name) {
+        localStorage.setItem('userName', user.name);
+      }
+
+      window.dispatchEvent(new CustomEvent('user-profile-updated'));
+
+      setMessage('Dados profissionais atualizados com sucesso!');
+      auth.refreshUserInfo();
+    } catch (err) {
+      const apiMessage = err?.response?.data?.message || 'Não foi possível salvar os dados profissionais.';
+      setError(apiMessage);
+    } finally {
+      setSavingProfessionalData(false);
+    }
+  };
+
 
   return (
     <div className="clinica-onboarding-page" style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2>Minha Clínica</h2>
-      <p>Use esta página para criar ou visualizar a clínica vinculada ao seu usuário.</p>
+      <h2>{subscriptionPlan === 'professional' ? 'Meus dados profissionais' : 'Minha Clínica'}</h2>
+      <p>
+        {subscriptionPlan === 'professional'
+          ? 'Atualize seus dados profissionais vinculados à sua assinatura MED1PE Profissional.'
+          : 'Use esta página para criar ou visualizar a clínica vinculada ao seu usuário.'}
+      </p>
 
-      {isLoading ? (
+      {isLoading || isLoadingPlan ? (
         <div>Carregando...</div>
+      ) : subscriptionPlan === 'professional' ? (
+        <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+          <h3>Meus dados profissionais</h3>
+          <form onSubmit={handleSaveProfessionalData} style={{ display: 'grid', gap: 16, marginTop: 16 }}>
+            <label>
+              Profissão
+              <input
+                type="text"
+                name="profissao"
+                value={professionalForm.profissao}
+                onChange={handleProfessionalFieldChange}
+                placeholder="Ex: Fisioterapeuta"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+              />
+            </label>
+
+            <label>
+              Conselho profissional
+              <input
+                type="text"
+                name="conselhoProfissional"
+                value={professionalForm.conselhoProfissional}
+                onChange={handleProfessionalFieldChange}
+                placeholder="Ex: CREFITO"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+              />
+            </label>
+
+            <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+              <label>
+                UF do conselho
+                <input
+                  type="text"
+                  name="conselhoUf"
+                  value={professionalForm.conselhoUf}
+                  onChange={handleProfessionalFieldChange}
+                  maxLength={2}
+                  placeholder="Ex: PE"
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', textTransform: 'uppercase' }}
+                />
+              </label>
+
+              <label>
+                Número de registro
+                <input
+                  type="text"
+                  name="numeroRegistroProfissional"
+                  value={professionalForm.numeroRegistroProfissional}
+                  onChange={handleProfessionalFieldChange}
+                  placeholder="Ex: 12345"
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                />
+              </label>
+            </div>
+
+            <label>
+              Valor particular padrão (R$)
+              <input
+                type="number"
+                name="valorParticularPadrao"
+                value={professionalForm.valorParticularPadrao}
+                onChange={handleProfessionalFieldChange}
+                min="0"
+                step="0.01"
+                placeholder="Ex: 180.00"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+              />
+            </label>
+
+            <small style={{ color: '#6c757d' }}>
+              O valor particular é opcional e funciona apenas como padrão configurável.
+            </small>
+
+            <button
+              type="submit"
+              disabled={savingProfessionalData}
+              style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: '#1E6B65', color: '#fff', cursor: savingProfessionalData ? 'not-allowed' : 'pointer', opacity: savingProfessionalData ? 0.7 : 1 }}
+            >
+              {savingProfessionalData ? 'Salvando...' : 'Salvar dados profissionais'}
+            </button>
+          </form>
+        </div>
       ) : auth.clinicaId && clinica ? (
         <div className="card p-4 mb-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
           <h3>{clinica.name}</h3>
@@ -378,7 +622,7 @@ function ClinicaOnboarding() {
       {error && <div style={{ marginTop: 16, color: '#c0392b' }}>{error}</div>}
 
       {/* SEÇÃO DE MEMBROS DA EQUIPE */}
-      {auth.clinicaId && clinica && (
+      {subscriptionPlan !== 'professional' && auth.clinicaId && clinica && (
         <div style={{ marginTop: 32 }}>
           <h3>Gerenciar Equipe</h3>
           <p>Adicione médicos, enfermeiros e recepcionistas à sua clínica.</p>
@@ -589,7 +833,7 @@ function ClinicaOnboarding() {
       )}
 
       {/* SEÇÃO DE GERENCIAMENTO DE CONVÊNIOS */}
-      {auth.clinicaId && clinica && (
+      {subscriptionPlan !== 'professional' && auth.clinicaId && clinica && (
         <div style={{ marginTop: 32 }}>
           <h3>Gerenciar Planos de Saúde / Convênios</h3>
           <p>Adicione ou remova planos de saúde disponíveis para seus pacientes.</p>

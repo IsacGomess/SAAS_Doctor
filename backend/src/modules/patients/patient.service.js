@@ -10,6 +10,21 @@ class PatientService {
         return await Patient.findById(patientId);
     }
 
+    // Busca um paciente garantindo que o usuário (userId) ou a clínica (clinicaId)
+    // tenham acesso a ele. Retorna null se não acessível.
+    async findAccessiblePatient(patientId, userId, clinicaId) {
+        const accessFilter = clinicaId
+            ? {
+                $or: [
+                    { clinicaId: clinicaId },
+                    { clinicaId: null, profissionalId: userId }
+                ]
+            }
+            : { clinicaId: null, profissionalId: userId };
+
+        return await Patient.findOne({ _id: patientId, ...accessFilter });
+    }
+
     // Registra o paciente decidindo se vai para clínica ou profissional privado
     async registerPatient(patientData, userId, clinicaId) {
         const finalData = { ...patientData };

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { getPatientAttendanceList } from '../../medical-record/services/medicalRecordService';
 import { createAppointment, getAppointments, updateAppointmentStatus } from '../services/appointmentService';
 import { createWaitingLineEntry, getWaitingLine } from '../../waiting-line/services/waitingLineService';
 import { useAuth } from '../../../hooks/useAuth';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import './clinicSchedule.css';
 
 const DEFAULT_CLINIC_AREA = 'Geral';
 
@@ -13,13 +15,16 @@ const ClinicSchedule = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [addingPatientId, setAddingPatientId] = useState(null);
+  const [expandedAppointmentId, setExpandedAppointmentId] = useState(null);
   const { clinicArea, clinicaId, userId } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
 
   // Estado do formulário de marcação
   const [scheduleForm, setScheduleForm] = useState({
     patientId: '',
     time: '',
-    notes: ''
+    notes: '',
+    isRecurring: false
   });
 
   // Carrega pacientes para o <select> e os agendamentos do dia
@@ -49,18 +54,24 @@ const ClinicSchedule = () => {
       // Junta o dia selecionado com o horário digitado no form
       const fullDateTime = `${selectedDate}T${scheduleForm.time}:00`;
       
-      await createAppointment({
+      const creationResult = await createAppointment({
         patientId: scheduleForm.patientId,
         appointmentDate: fullDateTime,
-        notes: scheduleForm.notes
+        notes: scheduleForm.notes,
+        isRecurring: scheduleForm.isRecurring
       });
 
       // Limpa formulário e recarrega a lista
-      setScheduleForm({ patientId: '', time: '', notes: '' });
+      setScheduleForm({ patientId: '', time: '', notes: '', isRecurring: false });
       await loadScheduleData();
-      alert('Agendamento realizado com sucesso!');
+      if (creationResult?.createdCount > 1) {
+        alert(`Agendamento recorrente criado com sucesso (${creationResult.createdCount} ocorrências nos próximos 30 dias).`);
+      } else {
+        alert('Agendamento realizado com sucesso!');
+      }
     } catch (err) {
-      alert('Erro ao agendar: ' + (err?.message || 'Tente novamente'));
+      const apiMessage = err?.response?.data?.error || err?.response?.data?.message;
+      alert('Erro ao agendar: ' + (apiMessage || err?.message || 'Tente novamente'));
     } finally {
       setSubmitting(false);
     }
@@ -136,30 +147,45 @@ const ClinicSchedule = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      agendado: <span className="badge bg-primary">Agendado</span>,
-      confirmado: <span className="badge bg-success">Confirmado</span>,
-      cancelado: <span className="badge bg-danger">Cancelado</span>,
-      atendido: <span className="badge bg-secondary">Atendido</span>,
-    };
-    return badges[status] || <span className="badge bg-light text-dark">{status}</span>;
+  const toggleDetails = (appointmentId) => {
+    setExpandedAppointmentId((current) => (current === appointmentId ? null : appointmentId));
   };
 
+  const getStatusBadgeMeta = (status) => {
+    const badges = {
+      agendado: { label: 'Agendado', className: 'bg-primary' },
+      confirmado: { label: 'Confirmado', className: 'bg-success' },
+      cancelado: { label: 'Cancelado', className: 'bg-danger' },
+      atendido: { label: 'Atendido', className: 'bg-secondary' }
+    };
+
+    return badges[status] || { label: status, className: 'bg-light text-dark' };
+  };
+
+  const listTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.28, ease: 'easeOut' };
+
+  const detailTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.2, ease: 'easeOut' };
+
+  const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
+
   return (
-    <div className="container-fluid pt-5 ps-1 pe-0 w-100">
+    <div className="container-fluid pt-5 ps-1 pe-0 w-100 schedule-page">
       {/* Cabeçalho */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Agenda da Clínica</h2>
-          <p className="text-muted m-0">Gerencie os horários e consultas dos seus pacientes.</p>
+      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div className="schedule-heading-wrap">
+          <h2 className="fw-bold m-0 schedule-title">Agenda da Clínica</h2>
+          <p className="text-muted m-0 schedule-subtitle">Gerencie os horários e consultas dos seus pacientes.</p>
         </div>
         {/* Filtro de Data Global */}
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 schedule-date-filter">
           <label className="fw-bold text-muted small m-0 text-nowrap">Visualizar Dia:</label>
           <input
             type="date"
-            className="form-control shadow-sm"
+            className="form-control shadow-sm schedule-date-input"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
@@ -169,14 +195,19 @@ const ClinicSchedule = () => {
       <div className="row g-4">
         {/* Coluna Esquerda - Novo Agendamento */}
         <div className="col-12 col-lg-4">
-          <div className="card border-0 shadow-sm rounded-3">
+          <motion.div
+            className="card border-0 shadow-sm rounded-3 schedule-panel-card"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={listTransition}
+          >
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>Novo Agendamento</h5>
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label text-muted small fw-bold">Paciente</label>
                   <select
-                    className="form-select"
+                    className="form-select schedule-input"
                     value={scheduleForm.patientId}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, patientId: e.target.value })}
                     required
@@ -192,7 +223,7 @@ const ClinicSchedule = () => {
                   <label className="form-label text-muted small fw-bold">Horário da Consulta</label>
                   <input
                     type="time"
-                    className="form-control"
+                    className="form-control schedule-input"
                     value={scheduleForm.time}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
                     required
@@ -202,7 +233,7 @@ const ClinicSchedule = () => {
                 <div className="mb-4">
                   <label className="form-label text-muted small fw-bold">Observações / Motivo</label>
                   <textarea
-                    className="form-control"
+                    className="form-control schedule-input"
                     rows="3"
                     placeholder="Ex: Primeira consulta, Retorno de exames..."
                     value={scheduleForm.notes}
@@ -210,19 +241,44 @@ const ClinicSchedule = () => {
                   />
                 </div>
 
+                <div className="mb-4">
+                  <div className="form-check schedule-recurring-check">
+                    <input
+                      id="recurring-appointment"
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={scheduleForm.isRecurring}
+                      onChange={(e) => setScheduleForm({ ...scheduleForm, isRecurring: e.target.checked })}
+                    />
+                    <label className="form-check-label text-muted small fw-semibold" htmlFor="recurring-appointment">
+                      Atendimento recorrente
+                    </label>
+                  </div>
+                  {scheduleForm.isRecurring && (
+                    <small className="text-muted d-block mt-2">
+                      O sistema criará ocorrências semanais no mesmo dia e horário pelos próximos 30 dias.
+                    </small>
+                  )}
+                </div>
+
                 <button type="submit" className="btn text-white w-100 py-2 shadow-sm" style={{ backgroundColor: '#1E6B65' }} disabled={submitting}>
                   {submitting ? 'Agendando...' : 'Confirmar Agendamento'}
                 </button>
               </form>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Coluna Direita - Agenda / Cronograma do Dia */}
         <div className="col-12 col-lg-8">
-          <div className="card border-0 shadow-sm rounded-3">
+          <motion.div
+            className="card border-0 shadow-sm rounded-3 schedule-panel-card"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3, delay: 0.06, ease: 'easeOut' }}
+          >
             <div className="card-body p-4">
-              <h5 className="fw-bold mb-4" style={{ color: '#1E6B65' }}>
+              <h5 className="fw-bold mb-4 schedule-list-title" style={{ color: '#1E6B65' }}>
                 Horários Solicitados para {new Date(selectedDate + 'T00:00:00').toLocaleDateString('pt-BR')}
               </h5>
 
@@ -237,8 +293,9 @@ const ClinicSchedule = () => {
                   <p>Nenhum paciente agendado para este dia.</p>
                 </div>
               ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle m-0">
+                <>
+                  <div className="table-responsive d-none d-md-block">
+                    <table className="table table-hover align-middle m-0 schedule-table">
                     <thead className="table-light">
                       <tr>
                         <th>Horário</th>
@@ -248,52 +305,193 @@ const ClinicSchedule = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {appointments.map((appt) => {
+                      {appointments.map((appt, index) => {
                         const horaFormatada = new Date(appt.appointmentDate).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit'
                         });
 
+                        const statusMeta = getStatusBadgeMeta(appt.status);
+                        const isExpanded = expandedAppointmentId === appt._id;
+
                         return (
-                          <tr key={appt._id}>
-                            <td className="fw-bold text-dark fs-5" style={{ width: '100px' }}>
-                              ⏰ {horaFormatada}
-                            </td>
-                            <td>
-                              <div className="fw-bold text-dark">{appt.patientId?.name || 'Paciente Não Identificado'}</div>
-                              <small className="text-muted d-block">{appt.notes || 'Sem observações'}</small>
-                            </td>
-                            <td>{getStatusBadge(appt.status)}</td>
-                            <td className="text-end">
-                              <div className="d-flex gap-2 justify-content-end align-items-center">
-                                {selectedDate === new Date().toISOString().split('T')[0] && ['agendado', 'confirmado'].includes(appt.status) && (
+                          <Fragment key={`desktop-${appt._id}`}>
+                            <motion.tr
+                              key={appt._id}
+                              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ ...listTransition, delay: prefersReducedMotion ? 0 : index * 0.03 }}
+                            >
+                              <td className="fw-bold text-dark fs-5" style={{ width: '110px' }}>
+                                {horaFormatada}
+                              </td>
+                              <td>
+                                <div className="fw-bold text-dark">{appt.patientId?.name || 'Paciente Não Identificado'}</div>
+                                <small className="text-muted d-block">{appt.notes || 'Sem observações'}</small>
+                              </td>
+                              <td>
+                                <AnimatePresence mode="wait" initial={false}>
+                                  <motion.span
+                                    key={`${appt._id}-${appt.status}`}
+                                    className={`badge ${statusMeta.className}`}
+                                    initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                                    transition={detailTransition}
+                                  >
+                                    {statusMeta.label}
+                                  </motion.span>
+                                </AnimatePresence>
+                              </td>
+                              <td className="text-end">
+                                <button
+                                  className="btn btn-sm btn-outline-secondary schedule-touch-btn"
+                                  onClick={() => toggleDetails(appt._id)}
+                                  aria-expanded={isExpanded}
+                                  aria-controls={`appointment-details-${appt._id}`}
+                                >
+                                  {isExpanded ? 'Fechar detalhes' : 'Ver detalhes'}
+                                </button>
+                              </td>
+                            </motion.tr>
+
+                            <tr key={`${appt._id}-details-row`}>
+                              <td colSpan="4" className="p-0 border-0">
+                                <AnimatePresence initial={false}>
+                                  {isExpanded && (
+                                    <motion.div
+                                      id={`appointment-details-${appt._id}`}
+                                      className="schedule-row-details"
+                                      initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+                                      transition={detailTransition}
+                                    >
+                                      <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                                        <small className="text-muted schedule-detail-note">
+                                          {appt.notes || 'Sem observações'}
+                                        </small>
+
+                                        <div className="d-flex flex-wrap gap-2">
+                                          {isTodaySelected && ['agendado', 'confirmado'].includes(appt.status) && (
+                                            <button
+                                              className="btn btn-sm btn-outline-success schedule-touch-btn"
+                                              onClick={() => handleAddToWaitingLine(appt)}
+                                              disabled={addingPatientId === appt._id}
+                                            >
+                                              {addingPatientId === appt._id ? 'Adicionando...' : 'Add à Fila de espera'}
+                                            </button>
+                                          )}
+
+                                          <button className="btn btn-sm btn-outline-success schedule-touch-btn" onClick={() => handleStatusChange(appt._id, 'confirmado')}>
+                                            Confirmar
+                                          </button>
+                                          <button className="btn btn-sm btn-outline-secondary schedule-touch-btn" onClick={() => handleStatusChange(appt._id, 'atendido')}>
+                                            Marcar como Atendido
+                                          </button>
+                                          <button className="btn btn-sm btn-outline-danger schedule-touch-btn" onClick={() => handleStatusChange(appt._id, 'cancelado')}>
+                                            Cancelar Agendamento
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </td>
+                            </tr>
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-md-none schedule-mobile-list">
+                    {appointments.map((appt, index) => {
+                      const horaFormatada = new Date(appt.appointmentDate).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+
+                      const statusMeta = getStatusBadgeMeta(appt.status);
+                      const isExpanded = expandedAppointmentId === appt._id;
+
+                      return (
+                        <motion.article
+                          className="schedule-mobile-item"
+                          key={`mobile-${appt._id}`}
+                          initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...listTransition, delay: prefersReducedMotion ? 0 : index * 0.04 }}
+                        >
+                          <div className="schedule-mobile-top">
+                            <strong className="schedule-mobile-time">{horaFormatada}</strong>
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.span
+                                key={`mobile-${appt._id}-${appt.status}`}
+                                className={`badge ${statusMeta.className}`}
+                                initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                                transition={detailTransition}
+                              >
+                                {statusMeta.label}
+                              </motion.span>
+                            </AnimatePresence>
+                          </div>
+
+                          <div className="schedule-mobile-patient">{appt.patientId?.name || 'Paciente Não Identificado'}</div>
+                          <small className="text-muted d-block">{appt.notes || 'Sem observações'}</small>
+
+                          <button
+                            className="btn btn-outline-secondary schedule-touch-btn w-100 mt-3"
+                            onClick={() => toggleDetails(appt._id)}
+                            aria-expanded={isExpanded}
+                            aria-controls={`appointment-mobile-details-${appt._id}`}
+                          >
+                            {isExpanded ? 'Fechar detalhes' : 'Abrir detalhes e ações'}
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.div
+                                id={`appointment-mobile-details-${appt._id}`}
+                                className="schedule-mobile-details"
+                                initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+                                transition={detailTransition}
+                              >
+                                {isTodaySelected && ['agendado', 'confirmado'].includes(appt.status) && (
                                   <button
-                                    className="btn btn-sm btn-outline-success"
+                                    className="btn btn-outline-success schedule-touch-btn w-100"
                                     onClick={() => handleAddToWaitingLine(appt)}
                                     disabled={addingPatientId === appt._id}
                                   >
                                     {addingPatientId === appt._id ? 'Adicionando...' : 'Add à Fila de espera'}
                                   </button>
                                 )}
-                                <div className="dropdown d-inline-block">
-                                  <ul className="dropdown-menu dropdown-menu-end">
-                                    <li><button className="dropdown-item text-success" onClick={() => handleStatusChange(appt._id, 'confirmado')}>Confirmar</button></li>
-                                    <li><button className="dropdown-item text-secondary" onClick={() => handleStatusChange(appt._id, 'atendido')}>Marcar como Atendido</button></li>
-                                    <li><hr className="dropdown-divider" /></li>
-                                    <li><button className="dropdown-item text-danger" onClick={() => handleStatusChange(appt._id, 'cancelado')}>Cancelar Agendamento</button></li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+
+                                <button className="btn btn-outline-success schedule-touch-btn w-100" onClick={() => handleStatusChange(appt._id, 'confirmado')}>
+                                  Confirmar
+                                </button>
+                                <button className="btn btn-outline-secondary schedule-touch-btn w-100" onClick={() => handleStatusChange(appt._id, 'atendido')}>
+                                  Marcar como Atendido
+                                </button>
+                                <button className="btn btn-outline-danger schedule-touch-btn w-100" onClick={() => handleStatusChange(appt._id, 'cancelado')}>
+                                  Cancelar Agendamento
+                                </button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.article>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

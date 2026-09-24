@@ -2,10 +2,13 @@ const jwt = require('jsonwebtoken');
 const { ZodError } = require('zod');
 const User = require('./user.model.js');
 const bcrypt = require('bcrypt');
-const { registerSchema, loginSchema, addMembroSchema, addMembroSchemaWithRegistro, membroIdParamSchema,forgotPasswordSchema,resetPasswordSchema} = require('./user.validator.js');
+const { generateCsrfToken } = require('../../middlewares/csrf.js');
+const { registerSchema, loginSchema, addMembroSchema, addMembroSchemaWithRegistro, membroIdParamSchema,forgotPasswordSchema,resetPasswordSchema, updateMeSchema} = require('./user.validator.js');
 const crypto = require('crypto');
 const { Resend } = require('resend');
+const BillingService = require('../billing/billing.service.js');
 const resend = new Resend(process.env.RESEND_API_KEY);
+const PROFESSIONAL_ROLES = ['medico', 'enfermeiro', 'fisioterapeuta', 'nutricionista', 'esteticista', 'dentista', 'nutrologo'];
 
 
 exports.refresh = async (req, res) => {
@@ -64,10 +67,50 @@ exports.refresh = async (req, res) => {
         });
     }
 };
-exports.logout = async (req, res) => {
+exports.csrfToken = async (req, res, next) => {
+    try {
+        const token = generateCsrfToken(req, res);
+
+        return res.status(200).json({
+            success: true,
+            csrfToken: token
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+exports.logout = async (req, res, next) => {
     const isProd = process.env.NODE_ENV === 'production';
-    
-    // Limpa ambos os cookies setando o maxAge para zero
+
+    // Tenta identificar o usuário: prefere req.userId (rota protegida), senão tenta decodificar o accessToken
+    let userId = req.userId || null;
+
+    if (!userId) {
+        try {
+            const token = req.cookies?.accessToken || (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null);
+            if (token) {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                userId = decoded.userId || null;
+            }
+        } catch (err) {
+            // Não conseguimos obter o userId a partir do token — não falhar o logout, apenas seguir para limpar cookies
+            userId = null;
+        }
+    }
+
+    // Se identificamos o usuário, incrementamos tokenVersion para invalidar sessões antigas
+    if (userId) {
+        try {
+            await User.findByIdAndUpdate(
+                userId,
+                { $inc: { tokenVersion: 1 } }
+            );
+        } catch (error) {
+            return next(error);
+        }
+    }
+
+    // Limpa ambos os cookies setando o maxAge para zero (preserva httpOnly/secure/sameSite)
     res.clearCookie('accessToken', { httpOnly: true, secure: isProd, sameSite:'lax' });
     res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite:'lax' });
 
@@ -216,6 +259,28 @@ exports.addMembro = async (req, res) => {
             isActive: true
         });
 
+        const seatSummary = await BillingService.getClinicSeatSummary(req.clinicaId);
+        const afterAddSummary = {
+            ...seatSummary,
+            activeProfessionalCount: seatSummary.activeProfessionalCount + (PROFESSIONAL_ROLES.includes(role) ? 1 : 0),
+            extraProfessionals: BillingService.calculateExtraProfessionalSeats(seatSummary.activeProfessionalCount + (PROFESSIONAL_ROLES.includes(role) ? 1 : 0))
+        };
+
+        let seatSync = null;
+        if (PROFESSIONAL_ROLES.includes(role)) {
+            try {
+                seatSync = await BillingService.reconcileClinicSeatSubscription(req.clinicaId, {
+                    activeProfessionalCount: afterAddSummary.activeProfessionalCount
+                });
+            } catch (syncError) {
+                console.error('Erro ao sincronizar assentos extras do Stripe após criação de membro:', syncError);
+                return res.status(500).json({
+                    success: false,
+                    message: syncError.message || 'Configuração de cobrança pendente: STRIPE_PRICE_EXTRA_PROFESSIONAL ausente.'
+                });
+            }
+        }
+
         console.log('✅ Membro criado:', newMembro._id, 'com clinicaId:', newMembro.clinicaId);
 
         return res.status(201).json({
@@ -227,6 +292,18 @@ exports.addMembro = async (req, res) => {
                 email: newMembro.email,
                 role: newMembro.role,
                 clinicaId: newMembro.clinicaId
+            },
+            billing: {
+                includedSeats: 5,
+                activeProfessionalCount: afterAddSummary.activeProfessionalCount,
+                extraProfessionals: afterAddSummary.extraProfessionals,
+                monthlyPriceCents: afterAddSummary.extraProfessionals > 0 ? afterAddSummary.extraProfessionals * 4990 : 0,
+                billingCycleLabel: afterAddSummary.billingCycleLabel,
+                chargeAt: afterAddSummary.chargeAt,
+                note: afterAddSummary.extraProfessionals > 0
+                    ? `Há ${afterAddSummary.extraProfessionals} profissional(is) adicional(is) acima do limite de 5. O valor será cobrado no ${afterAddSummary.billingCycleLabel}.`
+                    : 'Dentro do limite de cinco profissionais incluídos.',
+                stripeSync: seatSync
             }
         });
     } catch (error) {
@@ -279,7 +356,7 @@ exports.getMembros = async (req, res) => {
 
 exports.me = async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('_id name registroProf role clinicaId');
+        const user = await User.findById(req.userId).select('_id name registroProf role clinicaId profissao conselhoProfissional conselhoUf numeroRegistroProfissional valorParticularPadrao');
         if (!user) return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
         return res.status(200).json({ success: true, user });
     } catch (error) {
@@ -289,12 +366,27 @@ exports.me = async (req, res) => {
 
 exports.updateMe = async (req, res) => {
     try {
-        const { registroProf } = req.body;
+        const parsed = updateMeSchema.parse(req.body);
         if (!req.userId) return res.status(401).json({ success: false, message: 'Usuário não autenticado' });
 
-        const updated = await User.findByIdAndUpdate(req.userId, { registroProf: registroProf || null }, { new: true }).select('_id name registroProf role clinicaId');
+        const updates = {};
+        if (Object.prototype.hasOwnProperty.call(parsed, 'registroProf')) updates.registroProf = parsed.registroProf || null;
+        if (Object.prototype.hasOwnProperty.call(parsed, 'profissao')) updates.profissao = parsed.profissao || null;
+        if (Object.prototype.hasOwnProperty.call(parsed, 'conselhoProfissional')) updates.conselhoProfissional = parsed.conselhoProfissional || null;
+        if (Object.prototype.hasOwnProperty.call(parsed, 'conselhoUf')) updates.conselhoUf = parsed.conselhoUf || null;
+        if (Object.prototype.hasOwnProperty.call(parsed, 'numeroRegistroProfissional')) updates.numeroRegistroProfissional = parsed.numeroRegistroProfissional || null;
+        if (Object.prototype.hasOwnProperty.call(parsed, 'valorParticularPadrao')) updates.valorParticularPadrao = parsed.valorParticularPadrao;
+
+        const updated = await User.findByIdAndUpdate(req.userId, updates, { new: true }).select('_id name registroProf role clinicaId profissao conselhoProfissional conselhoUf numeroRegistroProfissional valorParticularPadrao');
         return res.status(200).json({ success: true, user: updated });
     } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Dados inválidos para atualização de perfil',
+                errors: error.flatten().fieldErrors
+            });
+        }
         console.error('Erro updateMe:', error);
         return res.status(500).json({ success: false, message: 'Erro ao atualizar usuário', error: error.message });
     }
@@ -349,12 +441,27 @@ exports.deleteMembro = async (req, res) => {
             });
         }
 
+        const removedRole = membro.role;
         await User.findByIdAndDelete(membroId);
         console.log('✅ Membro removido com sucesso:', membroId);
 
+        let seatSync = null;
+        if (PROFESSIONAL_ROLES.includes(removedRole)) {
+            try {
+                seatSync = await BillingService.reconcileClinicSeatSubscription(req.clinicaId);
+            } catch (syncError) {
+                console.error('Erro ao sincronizar assentos extras do Stripe após remoção de membro:', syncError);
+                return res.status(500).json({
+                    success: false,
+                    message: syncError.message || 'Configuração de cobrança pendente: STRIPE_PRICE_EXTRA_PROFESSIONAL ausente.'
+                });
+            }
+        }
+
         return res.status(200).json({
             success: true,
-            message: ' ✅ Membro removido com sucesso/Member removed successfully'
+            message: ' ✅ Membro removido com sucesso/Member removed successfully',
+            billing: seatSync
         });
     } catch (error) {
         if (error instanceof ZodError) {

@@ -9,16 +9,25 @@ const {
   , cancelItemSchema
 } = require('./patient.validator.js');
 
-const canAccessPatient = (req, patient) => {
-  if (!patient) return false;
-  if (patient.clinicaId) {
-    return req.clinicaId && patient.clinicaId.toString() === req.clinicaId.toString();
-  }
-  if (patient.profissionalId) {
-    return req.userId && patient.profissionalId.toString() === req.userId.toString();
-  }
-  return false;
-};
+// Authorization is centralized in PatientService.findAccessiblePatient
+
+const hasProfessionalPlan = (req) => req?.subscription?.plan === 'professional';
+
+const isRecepcionistaWithoutProfessionalPlan = (req) => (
+  req?.user?.role === 'recepcionista' && !hasProfessionalPlan(req)
+);
+
+const isMissingProfessionalRegistration = (req) => (
+  !req?.user?.registroProf || !String(req.user.registroProf).trim()
+);
+
+const shouldRequireProfessionalRegistration = (req) => (
+  req?.user && (req.user.role !== 'recepcionista' || hasProfessionalPlan(req))
+);
+
+const getRegistrationSettingsAreaText = (req) => (
+  hasProfessionalPlan(req) ? 'na seção Meus dados profissionais' : 'na área da clínica'
+);
 
 exports.registerPatient = async (req, res) => {
   try {
@@ -55,10 +64,15 @@ exports.getPatients = async (req, res) => {
 exports.medicalRecord = async (req, res) => {
   try {
     const recordData = medicalRecordSchema.parse(req.body);
-    // exige número de registro profissional para usuários que não são recepcionistas
-    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
-      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar dados no prontuário. Por favor, adicione seu número na área da clínica.' });
+    // Exige registro para cargos clínicos e para qualquer usuário no plano Professional.
+    if (shouldRequireProfessionalRegistration(req) && isMissingProfessionalRegistration(req)) {
+      return res.status(403).json({ success: false, message: `É necessário cadastrar número de registro profissional na sua conta antes de registrar dados no prontuário. Por favor, adicione seu número ${getRegistrationSettingsAreaText(req)}.` });
     }
+    const patient = await PatientService.findAccessiblePatient(recordData.patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+
     const newDataPatient = await PatientService.createMedicalRecord(recordData, req.userId);
     return res.status(201).json({ success: true, message: 'Dados do paciente registrados com sucesso', dataPatient: newDataPatient });
   } catch (error) {
@@ -77,13 +91,13 @@ exports.medicalRecord = async (req, res) => {
 exports.getMedicalRecords = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
-    const patient = await PatientService.findPatientById(patientId);
-    if (!canAccessPatient(req, patient)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
-    // Recepcionistas não podem visualizar prontuário
-    if (req.user && req.user.role === 'recepcionista') {
+    // Recepcionistas só são bloqueados fora do plano Professional
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
@@ -109,19 +123,19 @@ exports.getMedicalRecords = async (req, res) => {
 exports.evolution = async (req, res) => {
   try {
     const evolutionData = evolutionSchema.parse(req.body);
-    const patient = await PatientService.findPatientById(evolutionData.patientId);
-    if (!canAccessPatient(req, patient)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    const patient = await PatientService.findAccessiblePatient(evolutionData.patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
-    // Recepcionistas não podem criar/alterar evoluções
-    if (req.user && req.user.role === 'recepcionista') {
+    // Recepcionistas só são bloqueados fora do plano Professional
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
-    // exige número de registro profissional para usuários que não são recepcionistas
-    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
-      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar evoluções. Por favor, adicione seu número na área da clínica.' });
+    // Exige registro para cargos clínicos e para qualquer usuário no plano Professional.
+    if (shouldRequireProfessionalRegistration(req) && isMissingProfessionalRegistration(req)) {
+      return res.status(403).json({ success: false, message: `É necessário cadastrar número de registro profissional na sua conta antes de registrar evoluções. Por favor, adicione seu número ${getRegistrationSettingsAreaText(req)}.` });
     }
 
     const newEvolution = await PatientService.createEvolution(evolutionData, req.userId);
@@ -142,14 +156,19 @@ exports.evolution = async (req, res) => {
 exports.getEvolutions = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
-    // Recepcionistas não podem visualizar evoluções
-    if (req.user && req.user.role === 'recepcionista') {
+    // Recepcionistas só são bloqueados fora do plano Professional
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
-    // exige número de registro profissional para usuários que não são recepcionistas
-    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
-      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta para visualizar evoluções. Por favor, adicione seu número na área da clínica.' });
+    // Exige registro para cargos clínicos e para qualquer usuário no plano Professional.
+    if (shouldRequireProfessionalRegistration(req) && isMissingProfessionalRegistration(req)) {
+      return res.status(403).json({ success: false, message: `É necessário cadastrar número de registro profissional na sua conta para visualizar evoluções. Por favor, adicione seu número ${getRegistrationSettingsAreaText(req)}.` });
+    }
+
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
     const evolutions = await PatientService.getEvolutions(patientId);
@@ -173,19 +192,19 @@ exports.getEvolutions = async (req, res) => {
 exports.prescription = async (req, res) => {
   try {
     const prescriptionData = prescriptionSchema.parse(req.body);
-    const patient = await PatientService.findPatientById(prescriptionData.patientId);
-    if (!canAccessPatient(req, patient)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    const patient = await PatientService.findAccessiblePatient(prescriptionData.patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
-    // Recepcionistas não podem criar/alterar prescrições
-    if (req.user && req.user.role === 'recepcionista') {
+    // Recepcionistas só são bloqueados fora do plano Professional
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
     }
 
-    // exige número de registro profissional para usuários que não são recepcionistas
-    if (req.user && req.user.role !== 'recepcionista' && (!req.user.registroProf || !String(req.user.registroProf).trim())) {
-      return res.status(403).json({ success: false, message: 'É necessário cadastrar número de registro profissional na sua conta antes de registrar prescrições. Por favor, adicione seu número na área da clínica.' });
+    // Exige registro para cargos clínicos e para qualquer usuário no plano Professional.
+    if (shouldRequireProfessionalRegistration(req) && isMissingProfessionalRegistration(req)) {
+      return res.status(403).json({ success: false, message: `É necessário cadastrar número de registro profissional na sua conta antes de registrar prescrições. Por favor, adicione seu número ${getRegistrationSettingsAreaText(req)}.` });
     }
 
     const newPrescription = await PatientService.createPrescription(prescriptionData, req.userId);
@@ -206,9 +225,13 @@ exports.prescription = async (req, res) => {
 exports.getPrescriptions = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
-    // Recepcionistas não podem visualizar prescrições
-    if (req.user && req.user.role === 'recepcionista') {
+    // Recepcionistas só são bloqueados fora do plano Professional
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
       return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
     const prescriptions = await PatientService.getPrescriptions(patientId);
@@ -233,10 +256,9 @@ exports.cancelItem = async (req, res) => {
   try {
     const { patientId } = patientIdParamSchema.parse(req.params);
     const { itemId, type } = cancelItemSchema.parse(req.body);
-
-    const patient = await PatientService.findPatientById(patientId);
-    if (!canAccessPatient(req, patient)) {
-      return res.status(403).json({ success: false, message: 'Acesso negado a este paciente' });
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
     }
 
     // Busca o documento para checar ownership

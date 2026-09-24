@@ -10,6 +10,7 @@ import {
   createPrescription,
   cancelItem,
 } from '../services/medicalRecordService';
+import { getSubscription } from '../../../services/billing';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -41,6 +42,7 @@ const getProfessionalInfo = () => {
 const MedicalRecordHistory = () => {
   const { patientId } = useParams();
   const userRole = localStorage.getItem('role') || '';
+  const [subscriptionPlan, setSubscriptionPlan] = useState(null);
   const [activeTab, setActiveTab] = useState('evolution');
   const [patient, setPatient] = useState(null);
   const [history, setHistory] = useState({
@@ -79,6 +81,27 @@ const MedicalRecordHistory = () => {
   });
 
   useEffect(() => {
+    let mounted = true;
+
+    const loadSubscriptionPlan = async () => {
+      try {
+        const response = await getSubscription();
+        if (!mounted) return;
+        setSubscriptionPlan(response?.subscription?.plan || null);
+      } catch (err) {
+        if (!mounted) return;
+        setSubscriptionPlan(null);
+      }
+    };
+
+    loadSubscriptionPlan();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const loadHistory = async () => {
       if (!patientId) return;
       setLoading(true);
@@ -101,6 +124,8 @@ const MedicalRecordHistory = () => {
     };
     loadHistory();
   }, [patientId]);
+
+  const shouldBlockRecepcionistaSections = userRole === 'recepcionista' && subscriptionPlan !== 'professional';
 
   const handleCancel = async (type, itemId) => {
     if (!patientId) return;
@@ -413,7 +438,7 @@ const MedicalRecordHistory = () => {
   };
 
   const renderEvolutionContent = () => {
-    if (userRole === 'recepcionista') {
+    if (shouldBlockRecepcionistaSections) {
       return (
         <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar evoluções.</div>
       );
@@ -558,7 +583,7 @@ const MedicalRecordHistory = () => {
   };
 
   const renderMedicalRecordContent = () => {
-    if (userRole === 'recepcionista') {
+    if (shouldBlockRecepcionistaSections) {
       return (
         <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar histórico clínico.</div>
       );
@@ -703,7 +728,7 @@ const MedicalRecordHistory = () => {
   };
 
   const renderPrescriptionContent = () => {
-    if (userRole === 'recepcionista') {
+    if (shouldBlockRecepcionistaSections) {
       return (
         <div className="alert alert-danger" role="alert">Acesso negado: recepcionista não pode visualizar ou alterar prescrições.</div>
       );

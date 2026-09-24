@@ -1,8 +1,8 @@
 
 import { useState } from "react";
-import api from "../../../services/api";
+import api, { loadCsrfToken } from "../../../services/api";
 import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
-import avatar from "../../../images/login-image.png"; // Importa a imagem do avatar
+import avatar from "../../../images/login-image.webp"; // Importa a imagem do avatar
 
 function Login() {
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ function Login() {
 
         // 💡 ALTERAÇÃO AQUI: Verificamos se o objeto 'user' ou os dados vieram (independente de ter a propriedade .success)
         if (response.data && (response.data.user || response.data.name)) {
-            localStorage.removeItem('token'); // 🔒 Remove o token antigo por segurança
+            
             
             // Pega o nome do usuário de onde ele estiver no JSON
             const nomeUsuario = response.data.user?.name || response.data.name;
@@ -35,12 +35,35 @@ function Login() {
             if (idClinica) {
                 localStorage.setItem('clinicaId', idClinica);
                 console.log("[AUTH] 'clinicaId' gravado com sucesso no LocalStorage:", idClinica);
+
+                try {
+                    const clinicResponse = await api.get('/api/clinics/me');
+                    const nomeClinica = clinicResponse?.data?.clinica?.name || response.data.clinica?.name || '';
+
+                    if (nomeClinica) {
+                        localStorage.setItem('clinicName', nomeClinica);
+                        console.log("[AUTH] 'clinicName' gravado com sucesso no LocalStorage:", nomeClinica);
+                    } else {
+                        localStorage.removeItem('clinicName');
+                    }
+                } catch (clinicErr) {
+                    console.warn('[AUTH] Não foi possível buscar o nome da clínica no login:', clinicErr);
+                    localStorage.removeItem('clinicName');
+                }
             } else {
                 console.warn("[AUTH] O backend não enviou 'clinicaId' para este usuário.");
                 localStorage.removeItem('clinicaId');
+                localStorage.removeItem('clinicName');
             }
             const role = response.data.user?.role;
             if (role) localStorage.setItem('role', role);
+
+            // Após login bem-sucedido, carregamos o CSRF token associado ao refreshToken
+            try {
+              await loadCsrfToken();
+            } catch (err) {
+              console.warn('[CSRF] não foi possível carregar o token após login');
+            }
 
             alert("Sucesso, Bem vindo !!");
             navigate("/dashboard"); // 🚀 Redireciona o usuário para dentro do sistema
@@ -94,7 +117,7 @@ function Login() {
                       <div className="benefit-icon " style={{fontSize:'40px',color:"white"}}><i className="bi bi-globe-americas-fill pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Gestão Eficiente</strong></div>
                       <div>
                         
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Controle uma gestão eficiente de planos e faturamento de forma integrada com gráficos e relatórios.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Entenda quanto você  faturou e acompanhe seus números sem depender de planilhas.</p>
                       </div>
                     </div>
                     
@@ -102,14 +125,14 @@ function Login() {
                       <div className="benefit-icon" style={{fontSize: '40px', color:"white"}}><i className="bi bi-calendar-day pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Agenda Digital</strong></div>
                       <div>
                       
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Gerencie seus pacientes agendados e os novos fluxos da clínica.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Visualize seus atendimentos e organize sua rotina em poucos segundos.</p>
                       </div>
                     </div>
 
                     <div className="benefit-item">
                       <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-calendar2-plus ms-0 pe-4 "></i><strong style={{color:"white",fontSize:'20px'}}>Prontuários</strong></div>
                       <div>
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Acesse e atualize os prontuários dos pacientes com rapidez e segurança.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Tenha todo o histórico do paciente organizado em um só lugar.</p>
                       </div>
                     </div>
 
@@ -117,7 +140,9 @@ function Login() {
                       <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-shield-check pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Segurança Jurídica</strong></div>
                       <div>
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>
-                          A solução ideal para Donos de clínicas ou Profissionais da saúde que querem manter segurança jurídica na evolução dos pacientes, acompanhamento personalizado com documentos de recomendações de saúde no status atual do atendimento.
+                          Menos sistemas. Menos planilhas. Menos complicação.
+Tenha as principais ferramentas da sua clínica reunidas em um sistema simples, acessível e pensado para a rotina de quem atende.
+Comece a organizar sua clínica ou seus atendimentos particulares com o Med1.
                         </p>
                       </div>
                     </div>
@@ -268,7 +293,7 @@ function Login() {
                         opacity: loading ? 0.7 : 1
                       }}
                       >
-                      {loading ? 'ENTRANDO...' : 'ENTRAR NO SISTEMA'}
+                      {loading ? 'ENTRANDO...' : 'ENTRAR '}
                       </button>
                     </div>
 

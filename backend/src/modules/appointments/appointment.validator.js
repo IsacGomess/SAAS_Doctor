@@ -9,7 +9,8 @@ const createAppointmentSchema = z.object({
     appointmentDate: z.string({
         required_error: "A data e hora do agendamento são obrigatórias."
     }).min(1, "A data não pode estar vazia."),
-    notes: z.string().max(300, "Máximo de 300 caracteres.").optional().default('')
+    notes: z.string().max(300, "Máximo de 300 caracteres.").optional().default(''),
+    isRecurring: z.boolean().optional().default(false)
 });
 
 // Schema para buscar por data

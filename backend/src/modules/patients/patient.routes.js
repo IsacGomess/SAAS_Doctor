@@ -2,11 +2,15 @@ const express = require('express');
 const routes = express.Router();
 const patientController = require('./patient.controller.js');
 const authMiddleware = require('../../middlewares/auth.js');
+const requireActiveSubscription = require('../../middlewares/requireActiveSubscription.js');
+const csrfMiddleware = require('../../middlewares/csrf.js');
 const limiter = require('../../middlewares/rate-limit.js');
 
 // Middleware de autenticação para todas as rotas
 routes.use(authMiddleware.authenticateToken);
-routes.use(limiter.generalLimiter);
+routes.use(requireActiveSubscription);
+routes.use(csrfMiddleware.validateOrigin);
+routes.use(csrfMiddleware.doubleCsrfProtection);
 
 // Rotas de pacientes
 routes.get('/atendance-list', patientController.getPatients);

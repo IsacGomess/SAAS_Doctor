@@ -30,49 +30,54 @@ exports.authenticateToken = async (req, res, next) => {
         });
     }
 
+    // 4. Verifica assinatura e expiração do JWT
+    let decoded;
     try {
-        // 4. Verifica assinatura e expiração do JWT
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
-
-        // 5. Busca o estado ATUAL do usuário no banco
-        const user = await User.findById(decoded.userId)
-        .select('_id name clinicaId role registroProf isActive tokenVersion');
-
-        // Usuário removido ou desativado
-        if (!user || !user.isActive) {
-            return res.status(401).json({
-                success: false,
-                message: 'Sessão inválida ou expirada.'
-            });
-        }
-
-        // 6. Verifica se a sessão ainda é válida
-        if (decoded.tokenVersion !== user.tokenVersion) {
-            return res.status(401).json({
-                success: false,
-                message: 'Sessão inválida ou expirada.'
-            });
-        }
-        req.userId = user._id;
-        req.clinicaId = user.clinicaId || null;
-
-        req.user = {
-            userId: user._id,
-            name: user.name,
-            clinicaId: user.clinicaId || null,
-            role: user.role,
-            registroProf: user.registroProf || null
-        };
-
-        next();
-
-    } catch (error) {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        // JWT inválido/expirado: retornar 401
         return res.status(401).json({
             success: false,
             message: 'Sessão inválida ou expirada.'
         });
     }
+
+    // 5. Busca o estado ATUAL do usuário no banco
+    let user;
+    try {
+        user = await User.findById(decoded.userId)
+            .select('_id name clinicaId role registroProf isActive tokenVersion');
+    } catch (error) {
+        // Erro inesperado de banco: encaminhar para o error handler global
+        return next(error);
+    }
+
+    // Usuário removido ou desativado
+    if (!user || !user.isActive) {
+        return res.status(401).json({
+            success: false,
+            message: 'Sessão inválida ou expirada.'
+        });
+    }
+
+    // 6. Verifica se a sessão ainda é válida
+    if (decoded.tokenVersion !== user.tokenVersion) {
+        return res.status(401).json({
+            success: false,
+            message: 'Sessão inválida ou expirada.'
+        });
+    }
+
+    req.userId = user._id;
+    req.clinicaId = user.clinicaId || null;
+
+    req.user = {
+        userId: user._id,
+        name: user.name,
+        clinicaId: user.clinicaId || null,
+        role: user.role,
+        registroProf: user.registroProf || null
+    };
+
+    next();
 };

@@ -2,11 +2,15 @@ const express = require('express');
 const routes = express.Router();
 const waitingLineController = require('./waiting-line.controller.js');
 const authMiddleware = require('../../middlewares/auth.js');
+const requireActiveSubscription = require('../../middlewares/requireActiveSubscription.js');
+const csrfMiddleware = require('../../middlewares/csrf.js');
 const limiter = require('../../middlewares/rate-limit.js');
 
 // Middleware de autenticação para todas as rotas
 routes.use(authMiddleware.authenticateToken);
-routes.use(limiter.generalLimiter);
+routes.use(requireActiveSubscription);
+routes.use(csrfMiddleware.validateOrigin);
+routes.use(csrfMiddleware.doubleCsrfProtection);
 
 // Criar nova entrada na fila de espera
 routes.post('/create', waitingLineController.createWaitingLineEntry);
