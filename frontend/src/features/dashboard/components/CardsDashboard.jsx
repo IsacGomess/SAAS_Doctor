@@ -498,7 +498,7 @@ export function CardsDashboard() {
                                     {isProfessionalPlan ? 'Retornos Financeiros' : 'Status da Clínica'}
                                 </h5>
                                 <small className="text-muted">
-                                    {isProfessionalPlan ? '(Estimativa)' : '( Taxa de Ocupação )'}
+                                    {isProfessionalPlan ? '(Estimativa)' : 'Taxa de Ocupação semanal maxima  x  atendimentos realizados'}
                                 </small>
                             </div>
                             {isProfessionalPlan ? (
@@ -549,8 +549,8 @@ export function CardsDashboard() {
                                         className="form-control form-control-sm mb-3 dashboard-capacity-input"
                                         aria-label="Número máximo de atendimentos semanais"
                                         value={weeklyCapacity}
-                                        onChange={(event) => setWeeklyCapacity(Number(event.target.value))}
-                                    />
+                                        onChange={(event) => setWeeklyCapacity(Number(event.target.value))} 
+                                    /> 
 
                                     <div className="d-flex flex-column gap-2">
                                         {weeklyOccupancy.map((weekday) => (

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { createWaitingLineEntry, getWaitingLine } from "../../../features/waiting-line/services/waitingLineService";
+import { getSubscription } from "../../../services/billing";
 import "./Patients.css";
 
 export const Patients = () => {
@@ -24,6 +25,30 @@ export const Patients = () => {
   const [searchText, setSearchText] = useState("");
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
+  const [subscriptionPlan, setSubscriptionPlan] = useState(null);
+
+  const isProfessionalPlan = subscriptionPlan === "professional";
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSubscriptionPlan = async () => {
+      try {
+        const response = await getSubscription();
+        if (!active) return;
+        setSubscriptionPlan(response?.subscription?.plan || null);
+      } catch {
+        if (!active) return;
+        setSubscriptionPlan(null);
+      }
+    };
+
+    loadSubscriptionPlan();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const searchPatients = async () => {
       try {
@@ -352,15 +377,18 @@ export const Patients = () => {
                           className="btn btn-sm btn-outline-secondary"
                           onClick={() => navigate(`/dashboard/patients/${paciente._id}/history`)}
                         >
+                          <i className="bi bi-journal-medical me-1" aria-hidden="true"></i>
                           Prontuário
                         </button>
-                        <button
-                          className="btn btn-sm btn-outline-success"
-                          disabled={addingPatientId === paciente._id}
-                          onClick={() => handleAddToWaitingLine(paciente)}
-                        >
-                          {addingPatientId === paciente._id ? 'Adicionando...' : 'Add à Fila de espera'}
-                        </button>
+                        {!isProfessionalPlan && (
+                          <button
+                            className="btn btn-sm btn-outline-success"
+                            disabled={addingPatientId === paciente._id}
+                            onClick={() => handleAddToWaitingLine(paciente)}
+                          >
+                            {addingPatientId === paciente._id ? 'Adicionando...' : 'Add à Fila de espera'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

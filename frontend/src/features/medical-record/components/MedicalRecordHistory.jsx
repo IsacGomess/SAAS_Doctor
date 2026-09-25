@@ -11,6 +11,7 @@ import {
   cancelItem,
 } from '../services/medicalRecordService';
 import { getSubscription } from '../../../services/billing';
+import { createPortal } from 'react-dom';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -316,6 +317,7 @@ const MedicalRecordHistory = () => {
     if (!printData) return null;
     const { type, item, section } = printData;
     const professional = getProfessionalInfo();
+    const clinicName = (localStorage.getItem('clinicName') || '').trim();
 
     const titles = {
       evolution: 'EVOLUÇÃO',
@@ -328,8 +330,8 @@ const MedicalRecordHistory = () => {
       <div className="only-print official-document-sheet">
         {/* 1. CABEÇALHO DA CLÍNICA */}
         <div className="doc-clinic-header">
-          <h2>Med1PE</h2>
-          <p className="doc-subtitle">Atendimento Especializado</p>
+          <h2>Med1PE<small style={{ fontSize: '0.6rem' }}>.com.br</small></h2>
+          <p className="doc-subtitle">{clinicName}</p>
           <div className="doc-divider"></div>
         </div>
 
@@ -897,7 +899,7 @@ const MedicalRecordHistory = () => {
   };
 
   return (
-    <div className="container-fluid pt-5 ps-1 pe-0 w-100" style={{ minHeight: '100%' }}>
+    <div className="container-fluid pt-5 ps-1 pe-0 w-100 medical-record-page" style={{ minHeight: '100%' }}>
       {/* 💡 REGRAS DE IMPRESSÃO GLOBAIS CIRÚRGICAS */}
       <style>{`
         .cursor-pointer { cursor: pointer; }
@@ -906,7 +908,7 @@ const MedicalRecordHistory = () => {
         @media print {
           @page {
             size: A4;
-            margin: 6mm 6mm 10mm 6mm;
+            margin: 12mm;
           }
 
           aside, nav, .sidebar, .navbar, #sidebar, .sidebar-wrapper, [class*="sidebar"], [class*="nav"] {
@@ -928,19 +930,33 @@ const MedicalRecordHistory = () => {
             overflow: visible !important;
           }
 
+          .medical-record-page {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          }
+
           .only-print.official-document-sheet {
             display: flex !important;
             flex-direction: column;
-            width: 100% !important;
-            max-width: 100% !important;
+            width: 186mm !important;
+            max-width: 186mm !important;
             min-width: 0 !important;
             height: auto !important;
             min-height: auto !important;
             box-sizing: border-box !important;
             overflow: visible !important;
-            zoom: 0.86 !important;
-            transform-origin: top center;
-            margin: 0 auto !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+            position: relative !important;
+            left: 0 !important;
+            right: 0 !important;
+            float: none !important;
           }
 
           .official-document-sheet {
@@ -1070,9 +1086,169 @@ const MedicalRecordHistory = () => {
           }
         }
       `}</style>
+            <style>{`
+        .medical-print-root {
+          display: none !important;
+        }
 
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm;
+          }
+
+          /* Oculta a interface quando o documento estiver montado. */
+          body:has(> .medical-print-root) > :not(.medical-print-root) {
+            display: none !important;
+          }
+
+          html,
+          body {
+            display: block !important;
+            width: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: #fff !important;
+          }
+
+          .medical-print-root,
+          .medical-print-root .official-document-sheet {
+            display: block !important;
+            position: static !important;
+            float: none !important;
+            transform: none !important;
+
+            /* Usa toda a área útil da folha, respeitando as margens. */
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+
+            margin: 0 auto !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+          }
+
+          .medical-print-root * {
+            box-sizing: border-box !important;
+          }
+
+          .medical-print-root .official-document-sheet {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #111 !important;
+          }
+
+          .medical-print-root .doc-clinic-header,
+          .medical-print-root .doc-title-section {
+            display: block !important;
+            width: 100% !important;
+            text-align: center !important;
+            break-inside: avoid;
+            break-after: avoid;
+          }
+
+          .medical-print-root .doc-patient-box {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          .medical-print-root .doc-patient-row {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 4mm 8mm;
+          }
+
+          .medical-print-root .doc-patient-row > * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+          }
+
+          /* Permite que textos longos continuem na página seguinte. */
+          .medical-print-root .doc-body-content,
+          .medical-print-root .doc-text-block,
+          .medical-print-root .doc-item-card,
+          .medical-print-root .doc-obs-box {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+            overflow-wrap: anywhere;
+            word-break: normal;
+          }
+
+          .medical-print-root .doc-body-content {
+            font-size: 11pt !important;
+            margin-bottom: 6mm !important;
+          }
+
+          .medical-print-root .doc-text-block {
+            white-space: pre-wrap !important;
+            font-size: 11pt !important;
+            line-height: 1.5 !important;
+            orphans: 3;
+            widows: 3;
+          }
+
+          .medical-print-root h3,
+          .medical-print-root h4 {
+            break-after: avoid;
+            page-break-after: avoid;
+          }
+
+          /* Assinatura após o conteúdo, sem sobreposição. */
+          .medical-print-root .doc-footer-signature {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            margin: 12mm 0 0 !important;
+            padding: 6mm 0 0 !important;
+            text-align: center !important;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+
+          .medical-print-root .doc-signature-line {
+            width: 70mm !important;
+            max-width: 100% !important;
+            margin: 0 auto 3mm !important;
+            border-bottom: 1px solid #000 !important;
+          }
+
+          .medical-print-root .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
       {/* 💡 DOCUMENTO LIMPO EXCLUSIVO DE IMPRESSÃO */}
-      {renderOfficialPrintDocument()}
+          {createPortal(
+      <div className="medical-print-root">
+        {renderOfficialPrintDocument()}
+      </div>,
+      document.body
+    )}
 
       {/* RENDERIZAÇÃO DA TELA NORMAL DO SISTEMA */}
       <div className="no-print">
