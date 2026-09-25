@@ -6,8 +6,27 @@ import { updateAppointmentStatus } from '../../clinic/services/appointmentServic
 import { createWaitingLineEntry, getWaitingLine } from '../../waiting-line/services/waitingLineService';
 import { useAuth } from '../../../hooks/useAuth';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import './CardsDashboard.css';
 
 const DEFAULT_CLINIC_AREA = 'Geral';
+
+const dashboardGridVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.35,
+            ease: 'easeOut',
+            staggerChildren: 0.06
+        }
+    }
+};
+
+const dashboardCardVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } }
+};
 
 export function CardsDashboard() {
     const [summary, setSummary] = useState({
@@ -223,67 +242,69 @@ export function CardsDashboard() {
 
     return (
         <>
-         {/* Container principal ajustado para a sua estrutura de tela */}
-        <div className="p-3" style={{  minHeight: '100%' }}>
-            
-            {/* ROW PRINCIPAL (Divide o espaço total em 12 partes) */}
+        <motion.div
+            className="dashboard-cards-wrapper"
+            variants={prefersReducedMotion ? undefined : dashboardGridVariants}
+            initial={prefersReducedMotion ? false : 'hidden'}
+            animate="visible"
+        >
             <div className="row g-4">
                 
                 {/* ------------------------------------------------------------- */}
                 {/* COLUNA DA ESQUERDA: Ocupa 8 partes da tela (Cerca de 66%)       */}
                 {/* ------------------------------------------------------------- */}
-                <div className="col-12 col-lg-8 d-flex flex-column gap-3">
+                <div className="col-12 col-xl-8 d-flex flex-column gap-3">
                     
                     {/* CARD 1: Visão Geral do Dia */}
-                    <div className="card border-0 shadow-sm rounded-3 overflow-hidden" >
-                        <div className="card-body" style={{ backgroundColor: '#1E6B65', color: 'white', padding: '24px' }}>
-                            <div className="d-flex justify-content-between align-items-center mb-4">
+                    <motion.div className="card border-0 rounded-4 overflow-hidden dashboard-card dashboard-overview-card" variants={prefersReducedMotion ? undefined : dashboardCardVariants}>
+                        <div className="card-body dashboard-overview-body">
+                            <div className="d-flex justify-content-between align-items-start mb-4 gap-2">
                                 <h5 className="card-title fs-5 fw-bold text-uppercase m-0">Visão Geral da Semana</h5>
-                                <small className="opacity-75">ⓘ Dynâmico data</small>
+                                <small className="dashboard-card-hint">ⓘ Dynâmico data</small>
                             </div>
                             
                             {/* Os 4 mini-quadrados internos */}
                             <div className="row g-3">
                                 <div className="col-6 col-sm-3">
-                                    <div className="p-3 rounded-3" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                                    <div className="p-3 rounded-3 dashboard-stat-card">
                                         <small className="d-block text-truncate opacity-75 mb-1">Consultas <br /> Agendadas hoje </small>
                                         <span className="fs-2 fw-bold">{summary.consultasHoje}</span>
                                     </div>
                                 </div>
                                 <div className="col-6 col-sm-3">
-                                    <div className="p-3 rounded-3" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                                    <div className="p-3 rounded-3 dashboard-stat-card">
                                         <small className="d-block text-truncate opacity-75 mb-1">Novos <br /> Pacientes</small>
                                         <span className="fs-2 fw-bold">{summary.novosPacientesSemana}</span>
                                     </div>
                                 </div>
                                 <div className="col-6 col-sm-3">
-                                    <div className="p-3 rounded-3" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                                    <div className="p-3 rounded-3 dashboard-stat-card">
                                         <small className="d-block text-truncate opacity-75 mb-1">Atendidos <br /> hoje</small>
                                         <span className="fs-2 fw-bold">{agendaAtendidosHoje}</span>
                                     </div>
                                 </div>
                                 <div className="col-6 col-sm-3">
-                                    <div className="p-3 rounded-3" style={{ backgroundColor: '#FADBD8', color: '#78281F' }}>
+                                    <div className="p-3 rounded-3 dashboard-stat-card dashboard-stat-card-alert">
                                         <small className="d-block text-truncate mb-1">Cancelados <br /> hoje</small>
                                         <span className="fs-2 fw-bold">{agendaCanceladosHoje}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* CARD 3: Agenda de Hoje (Mais alto e logo abaixo do card verde) */}
-                    <div className="card border-0 shadow-sm rounded-3">
-                        <div className="card-body" style={{ padding: '24px', backgroundColor: '#FFFFFF' }}>
+                    <motion.div className="card border-0 rounded-4 dashboard-card dashboard-surface-card" variants={prefersReducedMotion ? undefined : dashboardCardVariants}>
+                        <div className="card-body dashboard-surface-body">
                             <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h5 className="card-title fs-5 fw-bold text-uppercase m-0" style={{ color: '#2C3E50' }}>Agenda de Hoje</h5>
-                                <select className="form-select form-select-sm w-auto">
+                                <h5 className="card-title fs-5 fw-bold text-uppercase m-0 dashboard-section-title">Agenda de Hoje</h5>
+                                <select className="form-select form-select-sm w-auto dashboard-select">
                                     <option>Geral</option>
                                 </select> 
                             </div>
 
-                            <div className="table-responsive">
-                                <table className="table table-hover align-middle m-0">
+                            <div className="table-responsive dashboard-table-wrap">
+                                <table className="table table-hover align-middle m-0 dashboard-table">
                                     <thead className="table-light">
                                         <tr>
                                             <th>Hora</th>
@@ -344,15 +365,7 @@ export function CardsDashboard() {
                                                                             animate={{ height: 'auto', opacity: 1 }}
                                                                             exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
                                                                             transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
-                                                                            className="d-flex flex-wrap gap-2 align-items-center justify-content-between"
-                                                                            style={{
-                                                                                margin: '0.25rem 0 0.7rem',
-                                                                                padding: '0.8rem',
-                                                                                border: '1px solid #e1e9ef',
-                                                                                borderRadius: '12px',
-                                                                                background: '#fbfdff',
-                                                                                overflow: 'hidden'
-                                                                            }}
+                                                                            className="d-flex flex-wrap gap-2 align-items-center justify-content-between dashboard-expanded-row"
                                                                         >
                                                                             <small className="text-muted">{appointment.notes || 'Sem observações'}</small>
 
@@ -406,23 +419,23 @@ export function CardsDashboard() {
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                 </div>
 
                 {/* ------------------------------------------------------------- */}
                 {/* COLUNA DA DIREITA: Ocupa 4 partes da tela (Cerca de 33%)        */}
                 {/* ------------------------------------------------------------- */}
-                <div className="col-12 col-lg-4 d-flex flex-column gap-4">
+                <div className="col-12 col-xl-4 d-flex flex-column gap-4">
                     
                     {/* CARD 4: Conteúdo superior direito */}
-                    <div className="card border-0 shadow-sm rounded-3" style={{minHeight:'290px'}}>
-                        <div className="card-body" style={{ padding: '24px', backgroundColor: '#FFFFFF' }}>
-                            <h5 className="card-title fs-6 fw-bold text-uppercase mb-4" style={{ color: '#2C3E50' }}>
-                                {isProfessionalPlan ? '5 pacientes mais atendidos no mês' : 'Planos mais Ultilizados na Semana'}
+                    <motion.div className="card border-0 rounded-4 dashboard-card dashboard-surface-card dashboard-plan-card" variants={prefersReducedMotion ? undefined : dashboardCardVariants}>
+                        <div className="card-body dashboard-surface-body">
+                            <h5 className="card-title fs-6 fw-bold text-uppercase mb-4 dashboard-section-title">
+                                {isProfessionalPlan ? 'Ranking de pacientes mais atendidos no mês' : 'Planos mais Ultilizados na Semana'}
                             </h5>
 
-                            <div style={{ fontSize: '14px' }}>
+                            <div className="dashboard-chart-list">
                                 {isProfessionalPlan ? (
                                     summary.professionalTopPatientsMonth.length === 0 ? (
                                         <div className="text-muted">Nenhum atendimento com status Atendido no mês vigente.</div>
@@ -430,22 +443,22 @@ export function CardsDashboard() {
                                         (() => {
                                             const max = Math.max(...summary.professionalTopPatientsMonth.map((p) => p.atendimentos), 1);
                                             return summary.professionalTopPatientsMonth.map((patient) => (
-                                                <div key={patient.patientId || patient.patientName} className="mb-3 pb-2 border-bottom">
+                                                <div key={patient.patientId || patient.patientName} className="mb-3 pb-2 border-bottom dashboard-list-item">
                                                     <div className="d-flex justify-content-between align-items-center gap-2 mb-1">
-                                                        <div style={{ minWidth: 0, maxWidth: '62%', fontSize: '14px', fontWeight: 600 }} className="text-truncate" title={patient.patientName}>
+                                                        <div className="dashboard-list-title text-truncate" title={patient.patientName}>
                                                             {patient.patientName}
                                                         </div>
-                                                        <div style={{ minWidth: '48px', textAlign: 'right', fontWeight: 700 }}>
+                                                        <div className="dashboard-list-value">
                                                             {patient.atendimentos}
                                                         </div>
                                                     </div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ background: '#F1F3F5', height: '10px', borderRadius: '6px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${Math.round((patient.atendimentos / max) * 100)}%`, height: '10px', background: '#1E6B65' }}></div>
+                                                    <div className="dashboard-bar-wrap">
+                                                        <div className="dashboard-bar-track">
+                                                            <div className="dashboard-bar-fill" style={{ width: `${Math.round((patient.atendimentos / max) * 100)}%` }}></div>
                                                         </div>
                                                     </div>
                                                     <div className="d-flex justify-content-end mt-1">
-                                                        <div style={{ minWidth: '132px', textAlign: 'right', fontSize: '12px', color: '#44525f' }}>
+                                                        <div className="dashboard-estimated-value">
                                                         {formatCurrencyBRL(patient.estimativa)}
                                                         </div>
                                                     </div>
@@ -460,14 +473,14 @@ export function CardsDashboard() {
                                         (() => {
                                             const max = Math.max(...plans.map(p => p.total), 1);
                                             return plans.map((p) => (
-                                                <div key={p.nome} className="d-flex align-items-center gap-3 mb-2">
-                                                    <div style={{ minWidth: '120px', fontSize: '14px' }} className="text-truncate">{p.nome}</div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ background: '#F1F3F5', height: '10px', borderRadius: '6px', overflow: 'hidden' }}>
-                                                            <div style={{ width: `${Math.round((p.total / max) * 100)}%`, height: '10px', background: '#1E6B65' }}></div>
+                                                <div key={p.nome} className="d-flex align-items-center gap-3 mb-2 dashboard-list-item">
+                                                    <div className="dashboard-list-title text-truncate">{p.nome}</div>
+                                                    <div className="dashboard-bar-wrap">
+                                                        <div className="dashboard-bar-track">
+                                                            <div className="dashboard-bar-fill" style={{ width: `${Math.round((p.total / max) * 100)}%` }}></div>
                                                         </div>
                                                     </div>
-                                                    <div style={{ minWidth: '36px', textAlign: 'right', fontWeight: 600 }}>{p.total}</div>
+                                                    <div className="dashboard-list-value">{p.total}</div>
                                                 </div>
                                             ));
                                         })()
@@ -475,17 +488,17 @@ export function CardsDashboard() {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* CARD 5: Conteúdo inferior direito */}
-                    <div className="card border-0 shadow-sm rounded-3">
-                        <div className="card-body" style={{ padding: '24px', backgroundColor: '#FFFFFF' }}>
+                    <motion.div className="card border-0 rounded-4 dashboard-card dashboard-surface-card" variants={prefersReducedMotion ? undefined : dashboardCardVariants}>
+                        <div className="card-body dashboard-surface-body">
                             <div className="mb-4">
-                                <h5 className="card-title fs-6 fw-bold text-uppercase m-0" style={{ color: '#2C3E50' }}>
+                                <h5 className="card-title fs-6 fw-bold text-uppercase m-0 dashboard-section-title">
                                     {isProfessionalPlan ? 'Retornos Financeiros' : 'Status da Clínica'}
                                 </h5>
                                 <small className="text-muted">
-                                    {isProfessionalPlan ? '(Estimativa)' : '( Taxa de Ocupação )'}
+                                    {isProfessionalPlan ? '(Estimativa)' : 'Taxa de Ocupação semanal maxima  x  atendimentos realizados'}
                                 </small>
                             </div>
                             {isProfessionalPlan ? (
@@ -503,18 +516,18 @@ export function CardsDashboard() {
                                                     <div key={month.mes}>
                                                         <div className="d-flex justify-content-between mb-1">
                                                             <small className="text-muted text-uppercase">{month.label}</small>
-                                                            <strong style={{ color: '#1E6B65' }}>{formatCurrencyBRL(month.estimativa)}</strong>
+                                                            <strong className="dashboard-accent-text">{formatCurrencyBRL(month.estimativa)}</strong>
                                                         </div>
                                                         <small className="text-muted d-block mb-1">Atendidos: {month.atendimentos}</small>
                                                         <div className="progress" style={{ height: '8px' }}>
                                                             <div
-                                                                className="progress-bar"
+                                                                className="progress-bar dashboard-progress-fill"
                                                                 role="progressbar"
                                                                 aria-label={`Retorno estimado de ${month.label}`}
                                                                 aria-valuenow={percentage}
                                                                 aria-valuemin="0"
                                                                 aria-valuemax="100"
-                                                                style={{ width: `${percentage}%`, backgroundColor: '#1E6B65' }}
+                                                                style={{ width: `${percentage}%` }}
                                                             ></div>
                                                         </div>
                                                     </div>
@@ -533,31 +546,30 @@ export function CardsDashboard() {
                                     <input
                                         type="number"
                                         min="1"
-                                        className="form-control form-control-sm mb-3"
-                                        style={{ width: '165px' }}
+                                        className="form-control form-control-sm mb-3 dashboard-capacity-input"
                                         aria-label="Número máximo de atendimentos semanais"
                                         value={weeklyCapacity}
-                                        onChange={(event) => setWeeklyCapacity(Number(event.target.value))}
-                                    />
+                                        onChange={(event) => setWeeklyCapacity(Number(event.target.value))} 
+                                    /> 
 
                                     <div className="d-flex flex-column gap-2">
                                         {weeklyOccupancy.map((weekday) => (
                                             <div key={weekday.dayOfWeek}>
                                                 <div className="d-flex justify-content-between mb-1">
                                                     <small className="text-muted">{weekday.label}</small>
-                                                    <strong style={{ color: '#1E6B65' }}>
+                                                    <strong className="dashboard-accent-text">
                                                         {weekday.percentage}% ({weekday.total})
                                                     </strong>
                                                 </div>
                                                 <div className="progress" style={{ height: '8px' }}>
                                                     <div
-                                                        className="progress-bar"
+                                                        className="progress-bar dashboard-progress-fill"
                                                         role="progressbar"
                                                         aria-label={`Ocupação de ${weekday.label}`}
                                                         aria-valuenow={weekday.percentage}
                                                         aria-valuemin="0"
                                                         aria-valuemax="100"
-                                                        style={{ width: `${weekday.percentage}%`, backgroundColor: '#1E6B65' }}
+                                                        style={{ width: `${weekday.percentage}%` }}
                                                     ></div>
                                                 </div>
                                             </div>
@@ -566,12 +578,12 @@ export function CardsDashboard() {
                                 </>
                             )}
                         </div>
-                    </div>
+                    </motion.div>
 
                 </div>
 
             </div>
-        </div>
+        </motion.div>
         </>
     )
 }

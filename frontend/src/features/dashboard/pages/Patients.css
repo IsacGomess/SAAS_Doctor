@@ -1,0 +1,112 @@
+.patients-page {
+  min-height: 100%;
+  padding-right: 0.75rem;
+  overflow-x: hidden;
+}
+
+.patients-title {
+  color: #1a3c39;
+  font-family: 'Sora', 'Segoe UI', sans-serif;
+}
+
+.patients-search-input {
+  min-width: 220px;
+  max-width: 320px;
+  border-color: #d7e7e3;
+  background: #fbfefd;
+}
+
+.patients-primary-btn {
+  background: linear-gradient(120deg, #0d8f83, #0b746a);
+  border: 0;
+}
+
+.patients-surface-card {
+  border: 1px solid rgba(219, 232, 229, 0.84);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 26px rgba(8, 54, 50, 0.08);
+}
+
+.patients-section-title {
+  color: #0f6f68;
+  font-family: 'Sora', 'Segoe UI', sans-serif;
+}
+
+.patients-empty-copy {
+  max-width: 400px;
+}
+
+.patients-table thead th {
+  color: #4d6662;
+  font-size: 0.79rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #dfebe8;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .patients-page {
+    padding-left: 0.15rem !important;
+    padding-right: 0.45rem;
+  }
+
+  .patients-search-input {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .patients-mobile-list thead {
+    display: none !important;
+  }
+
+  .patients-mobile-list tbody,
+  .patients-mobile-list tr,
+  .patients-mobile-list td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .patients-mobile-list tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .patients-mobile-list tr {
+    background: #fff !important;
+    border: 1px solid #e3edeb !important;
+    border-radius: 12px !important;
+    padding: 14px 12px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .patients-mobile-list td {
+    border: none !important;
+    padding: 4px 0 !important;
+  }
+
+  .patients-mobile-list td.patient-mobile-hidden {
+    display: none !important;
+  }
+
+  .patients-mobile-list td.patient-mobile-name {
+    display: block !important;
+    padding-bottom: 10px !important;
+  }
+
+  .patients-mobile-list td.patient-mobile-actions {
+    display: block !important;
+    padding-top: 10px !important;
+  }
+
+  .patients-mobile-list .patient-mobile-actions .d-flex {
+    justify-content: flex-end !important;
+    gap: 8px !important;
+  }
+
+  .patients-mobile-list .patient-mobile-actions .btn {
+    flex: 1 1 0 !important;
+    min-width: 120px !important;
+  }
+}

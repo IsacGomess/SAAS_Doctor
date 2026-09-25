@@ -3,6 +3,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import api from '../../../services/api';
 import { addMembro, getMembros, deleteMembro } from '../../clinic/hooks/membroService';
 import { getSubscription } from '../../../services/billing';
+import './ClinicaOnboarding.css';
 
 function ClinicaOnboarding() {
   const auth = useAuth();
@@ -411,8 +412,8 @@ function ClinicaOnboarding() {
 
 
   return (
-    <div className="clinica-onboarding-page" style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2>{subscriptionPlan === 'professional' ? 'Meus dados profissionais' : 'Minha Clínica'}</h2>
+    <div className="clinica-onboarding-page onboarding-page-shell">
+      <h2 className="onboarding-page-title">{subscriptionPlan === 'professional' ? 'Meus dados profissionais' : 'Minha Clínica'}</h2>
       <p>
         {subscriptionPlan === 'professional'
           ? 'Atualize seus dados profissionais vinculados à sua assinatura MED1PE Profissional.'
@@ -422,9 +423,9 @@ function ClinicaOnboarding() {
       {isLoading || isLoadingPlan ? (
         <div>Carregando...</div>
       ) : subscriptionPlan === 'professional' ? (
-        <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+        <div className="card p-4 onboarding-surface-card">
           <h3>Meus dados profissionais</h3>
-          <form onSubmit={handleSaveProfessionalData} style={{ display: 'grid', gap: 16, marginTop: 16 }}>
+          <form onSubmit={handleSaveProfessionalData} className="onboarding-form-grid">
             <label>
               Profissão
               <input
@@ -433,23 +434,11 @@ function ClinicaOnboarding() {
                 value={professionalForm.profissao}
                 onChange={handleProfessionalFieldChange}
                 placeholder="Ex: Fisioterapeuta"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
 
-            <label>
-              Conselho profissional
-              <input
-                type="text"
-                name="conselhoProfissional"
-                value={professionalForm.conselhoProfissional}
-                onChange={handleProfessionalFieldChange}
-                placeholder="Ex: CREFITO"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
-              />
-            </label>
-
-            <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+            <div className="onboarding-two-col-grid">
               <label>
                 UF do conselho
                 <input
@@ -459,7 +448,7 @@ function ClinicaOnboarding() {
                   onChange={handleProfessionalFieldChange}
                   maxLength={2}
                   placeholder="Ex: PE"
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', textTransform: 'uppercase' }}
+                  className="onboarding-input onboarding-input-uppercase"
                 />
               </label>
 
@@ -471,7 +460,7 @@ function ClinicaOnboarding() {
                   value={professionalForm.numeroRegistroProfissional}
                   onChange={handleProfessionalFieldChange}
                   placeholder="Ex: 12345"
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                  className="onboarding-input"
                 />
               </label>
             </div>
@@ -486,7 +475,7 @@ function ClinicaOnboarding() {
                 min="0"
                 step="0.01"
                 placeholder="Ex: 180.00"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
 
@@ -497,14 +486,15 @@ function ClinicaOnboarding() {
             <button
               type="submit"
               disabled={savingProfessionalData}
-              style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: '#1E6B65', color: '#fff', cursor: savingProfessionalData ? 'not-allowed' : 'pointer', opacity: savingProfessionalData ? 0.7 : 1 }}
+              className="onboarding-primary-btn"
+              style={{ cursor: savingProfessionalData ? 'not-allowed' : 'pointer', opacity: savingProfessionalData ? 0.7 : 1 }}
             >
               {savingProfessionalData ? 'Salvando...' : 'Salvar dados profissionais'}
             </button>
           </form>
         </div>
       ) : auth.clinicaId && clinica ? (
-        <div className="card p-4 mb-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+        <div className="card p-4 mb-4 onboarding-surface-card">
           <h3>{clinica.name}</h3>
           <p><strong>ID da Clínica:</strong> {clinica._id}</p>
           <p><strong>CNPJ:</strong> {clinica.cnpj || 'Não informado'}</p>
@@ -515,7 +505,7 @@ function ClinicaOnboarding() {
           {clinica.donoId && currentUserId && clinica.donoId._id === currentUserId && (
             <div style={{ marginTop: 8 }}>
               <label style={{ display: 'block', fontSize: 13, color: '#333', marginBottom: 6 }}>Seu Número de Registro Profissional</label>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="onboarding-inline-actions">
                 <input
                   type="text"
                   value={clinica.donoId.registroProf || ''}
@@ -527,7 +517,8 @@ function ClinicaOnboarding() {
                   }}
                   placeholder="Ex: CRM12345"
                   disabled={!!clinica.donoId.registroProf && !adminEditingRegistro}
-                  style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', flex: 1 }}
+                  className="onboarding-input"
+                  style={{ flex: 1 }}
                 />
                 <button
                   onClick={async () => {
@@ -550,16 +541,17 @@ function ClinicaOnboarding() {
                       setError('Não foi possível salvar o número de registro');
                     }
                   }}
-                  style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#1E6B65', color: '#fff' }}
+                  className="onboarding-primary-btn"
+                  style={{ padding: '8px 12px' }}
                 >{adminEditingRegistro || !clinica.donoId.registroProf ? 'Salvar' : 'Editar'}</button>
               </div>
             </div>
           )}
         </div>
       ) : (
-        <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+        <div className="card p-4 onboarding-surface-card">
           <h3>Configurar nova clínica</h3>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 16 }}>
+          <form onSubmit={handleSubmit} className="onboarding-form-grid">
             <label>
               Nome da clínica
               <input
@@ -568,7 +560,7 @@ function ClinicaOnboarding() {
                 value={form.name}
                 onChange={handleChange}
                 required
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
             <label>
@@ -578,7 +570,7 @@ function ClinicaOnboarding() {
                 name="cnpj"
                 value={form.cnpj}
                 onChange={handleChange}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
             <label>
@@ -588,7 +580,7 @@ function ClinicaOnboarding() {
                 name="address"
                 value={form.address}
                 onChange={handleChange}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
             <label>
@@ -598,7 +590,7 @@ function ClinicaOnboarding() {
                 name="phone"
                 value={form.phone}
                 onChange={handleChange}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
             <label>
@@ -608,10 +600,10 @@ function ClinicaOnboarding() {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                className="onboarding-input"
               />
             </label>
-            <button type="submit" style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: '#1E6B65', color: '#fff', cursor: 'pointer' }}>
+            <button type="submit" className="onboarding-primary-btn">
               Criar Clínica
             </button>
           </form>
@@ -623,14 +615,14 @@ function ClinicaOnboarding() {
 
       {/* SEÇÃO DE MEMBROS DA EQUIPE */}
       {subscriptionPlan !== 'professional' && auth.clinicaId && clinica && (
-        <div style={{ marginTop: 32 }}>
+        <div className="onboarding-section-block">
           <h3>Gerenciar Equipe</h3>
           <p>Adicione médicos, enfermeiros e recepcionistas à sua clínica.</p>
 
           {/* Formulário de Novo Membro */}
-          <div className="card p-4 mb-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)', marginTop: 16 }}>
+          <div className="card p-4 mb-4 onboarding-surface-card onboarding-spacer-top">
             <h4>Adicionar Novo Membro</h4>
-            <form onSubmit={handleSubmitMembro} style={{ display: 'grid', gap: 16, marginTop: 16, gridTemplateColumns: '1fr 1fr' }}>
+            <form onSubmit={handleSubmitMembro} className="onboarding-form-grid onboarding-form-two-columns">
               <label>
                 Nome Completo
                 <input
@@ -640,7 +632,7 @@ function ClinicaOnboarding() {
                   onChange={handleChangeMembro}
                   required
                   placeholder="Ex: João Silva"
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                  className="onboarding-input"
                 />
               </label>
               <label>
@@ -652,7 +644,7 @@ function ClinicaOnboarding() {
                   onChange={handleChangeMembro}
                   required
                   placeholder="ex@clinica.com"
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                  className="onboarding-input"
                 />
               </label>
               <label>
@@ -664,7 +656,7 @@ function ClinicaOnboarding() {
                   onChange={handleChangeMembro}
                   required
                   placeholder="Mínimo 6 caracteres"
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                  className="onboarding-input"
                 />
               </label>
               <label>
@@ -673,7 +665,7 @@ function ClinicaOnboarding() {
                   name="role"
                   value={formMembro.role}
                   onChange={handleChangeMembro}
-                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                  className="onboarding-input"
                 >
                   <option value="recepcionista">Recepcionista</option>
                   <option value="medico">Médico</option>
@@ -695,21 +687,13 @@ function ClinicaOnboarding() {
                     onChange={handleChangeMembro}
                     required={formMembro.role !== 'recepcionista'}
                     placeholder="Ex: CRM12345"
-                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ccc', marginTop: 4 }}
+                    className="onboarding-input"
                   />
                 </label>
               )}
               <button
                 type="submit"
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: '#1E6B65',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  gridColumn: '1 / -1'
-                }}
+                className="onboarding-primary-btn onboarding-full-width"
               >
                 Adicionar Membro
               </button>
@@ -719,17 +703,18 @@ function ClinicaOnboarding() {
           </div>
 
           {/* Lista de Membros */}
-          <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+          <div className="card p-4 onboarding-surface-card">
             <h4>Membros da Equipe ({membros.length})</h4>
             {isLoadingMembros ? (
               <p>Carregando membros...</p>
             ) : membros.length === 0 ? (
               <p style={{ color: '#999' }}>Nenhum membro cadastrado ainda.</p>
             ) : (
-              <div style={{ marginTop: 16 }}>
+              <div className="onboarding-list-stack">
                 {membros.map((membro) => (
                   <div
                     key={membro._id}
+                    className="onboarding-list-row"
                     style={{
                       padding: 12,
                       borderBottom: '1px solid #eee',
@@ -756,7 +741,7 @@ function ClinicaOnboarding() {
                         </>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div className="onboarding-row-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       <span style={{
                         background: membro.role === 'administrador' ? '#1E6B65' : '#f0f0f0',
                         color: membro.role === 'administrador' ? '#fff' : '#333',
@@ -834,39 +819,26 @@ function ClinicaOnboarding() {
 
       {/* SEÇÃO DE GERENCIAMENTO DE CONVÊNIOS */}
       {subscriptionPlan !== 'professional' && auth.clinicaId && clinica && (
-        <div style={{ marginTop: 32 }}>
+        <div className="onboarding-section-block">
           <h3>Gerenciar Planos de Saúde / Convênios</h3>
           <p>Adicione ou remova planos de saúde disponíveis para seus pacientes.</p>
 
           {/* Formulário de Novo Convênio */}
-          <div className="card p-4 mb-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)', marginTop: 16 }}>
+          <div className="card p-4 mb-4 onboarding-surface-card onboarding-spacer-top">
             <h4>Adicionar Novo Convênio</h4>
-            <form onSubmit={handleCreateConvenio} style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <form onSubmit={handleCreateConvenio} className="onboarding-convenio-form">
               <input
                 type="text"
                 value={newConvenioName}
                 onChange={(e) => setNewConvenioName(e.target.value)}
                 placeholder="Ex: Allianz Saúde, Geap, Mediservice..."
-                style={{
-                  flex: 1,
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #ccc',
-                  fontSize: 14
-                }}
+                className="onboarding-input"
+                style={{ flex: 1, fontSize: 14 }}
               />
               <button
                 type="submit"
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: '#1E6B65',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  whiteSpace: 'nowrap'
-                }}
+                className="onboarding-primary-btn"
+                style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}
               >
                 + Adicionar Convênio
               </button>
@@ -876,17 +848,18 @@ function ClinicaOnboarding() {
           </div>
 
           {/* Lista de Convênios */}
-          <div className="card p-4" style={{ background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(0,0,0,0.05)' }}>
+          <div className="card p-4 onboarding-surface-card">
             <h4>Convênios Cadastrados ({convenios.filter(c => c.ativo).length})</h4>
             {isLoadingConvenios ? (
               <p>Carregando convênios...</p>
             ) : convenios.length === 0 ? (
               <p style={{ color: '#999', marginTop: 12 }}>Nenhum convênio cadastrado ainda.</p>
             ) : (
-              <div style={{ marginTop: 16 }}>
+              <div className="onboarding-list-stack">
                 {convenios.map((convenio) => (
                   <div
                     key={convenio._id}
+                    className="onboarding-list-row"
                     style={{
                       padding: 12,
                       marginBottom: 8,
