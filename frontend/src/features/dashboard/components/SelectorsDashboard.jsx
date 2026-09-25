@@ -67,14 +67,13 @@ export function SelectorsDashboard() {
     return (
         <>
             <div
-                className="icone mt-3 d-flex justify-content-center align-items-center"
-                style={{ backgroundColor: "#FFFFFF" }}
+                className="dashboard-brand icone mt-3 d-flex justify-content-center align-items-center"
             >
                 <i className="bi bi-lungs me-2"></i>
                 <p className="med mb-0 sidebar-brand-text">MED</p>
             </div>
 
-            <div className="position-btn bg-white d-flex flex-column align-items-center">
+            <div className="dashboard-menu position-btn bg-white d-flex flex-column align-items-center">
                 {menuItems.map((item) => (
                     <NavLink
                         key={item.to}
@@ -82,7 +81,7 @@ export function SelectorsDashboard() {
                         end={item.end}
                         title={item.label}
                         className={({ isActive }) =>
-                            `btn btn-color-defaut m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
+                            `btn btn-color-defaut dashboard-nav-link m-1 fs-5 d-flex align-items-center w-100 ${isActive ? "activo" : ""}`
                         }
                     >
                         <i className={`bi ${item.icon} icon-menu me-4`}></i>

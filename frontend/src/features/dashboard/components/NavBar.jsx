@@ -79,16 +79,17 @@ export function NavBar({userName, registroProf, clinicName}) {
     };
 
     return (
-        <nav className="navbar"
-            style={{ backgroundColor: '#F0F4F3', minHeight: '30px', position:'fixed', top:'0',left:'20%',width:'80%', borderBottom:'1px solid rgba(0,0,0,0.08)'}}>
-            <div className="container-fluid" style={{display:"flex", justifyContent:'space-between'}}>
-                <span style={{fontSize:'18px',margin:'10px 0px 0px 10px'}}>
-                    <p style={{fontSize:'14px' ,margin:'6px 0px 3px 5px'}}>{formatClinicName(clinicName) || 'Bem vindo,'}</p>
-                    Dr<span style={{fontSize:'5px'}}>(a).</span>  {(userName || '').toUpperCase()} - {registroProf}
-                    {renderSubscriptionIndicator()}
-                </span>
+        <nav className="dashboard-topbar" role="navigation" aria-label="Cabeçalho do dashboard">
+            <div className="dashboard-topbar-inner">
+                <div className="dashboard-topbar-title">
+                    <p className="dashboard-topbar-clinic">{formatClinicName(clinicName) || 'Bem vindo,'}</p>
+                    <span className="dashboard-topbar-doctor">
+                        Dr<span className="dashboard-topbar-suffix">(a).</span> {(userName || '').toUpperCase()} - {registroProf}
+                        {renderSubscriptionIndicator()}
+                    </span>
+                </div>
                 <button
-                    className="btn btn-outline-dark btn-sm bg-white text-dark rounded-3 "
+                    className="btn btn-outline-dark btn-sm bg-white text-dark rounded-3 dashboard-logout-btn"
                     onClick={() => {
                         logout();
                     }}>

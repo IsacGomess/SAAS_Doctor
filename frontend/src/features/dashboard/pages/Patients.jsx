@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { createWaitingLineEntry, getWaitingLine } from "../../../features/waiting-line/services/waitingLineService";
+import "./Patients.css";
 
 export const Patients = () => {
   const auth = useAuth();
@@ -175,84 +176,23 @@ export const Patients = () => {
   }
 
   return (
-    <>
-      <style>{`
-        @media (max-width: 767px) {
-          .patients-mobile-list thead {
-            display: none !important;
-          }
-
-          .patients-mobile-list tbody,
-          .patients-mobile-list tr,
-          .patients-mobile-list td {
-            display: block !important;
-            width: 100% !important;
-          }
-
-          .patients-mobile-list tbody {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 12px !important;
-          }
-
-          .patients-mobile-list tr {
-            background: #fff !important;
-            border: 1px solid #e9ecef !important;
-            border-radius: 12px !important;
-            padding: 14px 12px !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
-          }
-
-          .patients-mobile-list td {
-            border: none !important;
-            padding: 4px 0 !important;
-          }
-
-          .patients-mobile-list td.patient-mobile-hidden {
-            display: none !important;
-          }
-
-          .patients-mobile-list td.patient-mobile-name {
-            display: block !important;
-            padding-bottom: 10px !important;
-          }
-
-          .patients-mobile-list td.patient-mobile-actions {
-            display: block !important;
-            padding-top: 10px !important;
-          }
-
-          .patients-mobile-list .patient-mobile-actions .d-flex {
-            justify-content: flex-end !important;
-            gap: 8px !important;
-          }
-
-          .patients-mobile-list .patient-mobile-actions .btn {
-            flex: 1 1 0 !important;
-            min-width: 120px !important;
-          }
-        }
-      `}</style>
-
-      <div className="container-fluid pt-5 ps-1 pe-0 w-100" style={{ minHeight: '100%' }}>
+    <div className="patients-page container-fluid pt-5 ps-1 pe-0 w-100">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
           <div>
-            <h2 className="fw-bold m-0" style={{ color: '#2C3E50' }}>Pacientes</h2>
+            <h2 className="fw-bold m-0 patients-title">Pacientes</h2>
             <p className="text-muted m-0">Gerencie os prontuários e cadastros da sua clínica</p>
           </div>
           <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-md-auto">
             <input
               type="search"
-              className="form-control"
-              style={{ minWidth: '220px', maxWidth: '320px' }}
+              className="form-control patients-search-input"
               placeholder="Buscar por nome ou CPF"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
             {!showForm && (
               <button
-                className="btn text-white px-4 py-2 shadow-sm"
-                style={{ backgroundColor: '#1E6B65' }}
+                className="btn text-white px-4 py-2 shadow-sm patients-primary-btn"
                 onClick={() => setShowForm(true)}
               >
                 + Novo Paciente
@@ -262,9 +202,9 @@ export const Patients = () => {
         </div>
 
       {showForm && (
-        <div className="card border-0 shadow-sm rounded-3 mb-4 animate__animated animate__fadeIn">
+        <div className="card border-0 rounded-4 mb-4 animate__animated animate__fadeIn patients-surface-card">
           <div className="card-body p-4">
-            <h5 className="fw-bold mb-3" style={{ color: '#1E6B65' }}>Cadastrar Novo Paciente</h5>
+            <h5 className="fw-bold mb-3 patients-section-title">Cadastrar Novo Paciente</h5>
             {formError && (
               <div className="alert alert-danger mb-3" role="alert">
                 {formError}
@@ -351,7 +291,7 @@ export const Patients = () => {
                 <button type="button" className="btn btn-light px-3" onClick={() => setShowForm(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn text-white px-4" style={{ backgroundColor: '#1E6B65' }}>
+                <button type="submit" className="btn text-white px-4 patients-primary-btn">
                   Salvar Cadastro
                 </button>
               </div>
@@ -361,17 +301,16 @@ export const Patients = () => {
       )}
 
       {filteredPatients.length === 0 ? (
-      <div className="card border-0 shadow-sm rounded-3 text-center py-5">
+      <div className="card border-0 rounded-4 text-center py-5 patients-surface-card">
         <div className="card-body py-5">
           <div className="fs-1 mb-3">🔍</div>
           <h4 className="fw-bold text-dark">Nenhum paciente encontrado</h4>
-          <p className="text-muted mx-auto" style={{ maxWidth: '400px' }}>
+          <p className="text-muted mx-auto patients-empty-copy">
             {searchText ? `Não encontramos resultados para "${searchText}"` : "Você ainda não possui pacientes vinculados ao seu perfil."}
           </p>
           {!showForm && !searchText && (
             <button
-              className="btn text-white mt-2 px-4 shadow-sm"
-              style={{ backgroundColor: '#1E6B65' }}
+              className="btn text-white mt-2 px-4 shadow-sm patients-primary-btn"
               onClick={() => setShowForm(true)}
             >
               Cadastrar meu primeiro paciente
@@ -380,10 +319,10 @@ export const Patients = () => {
         </div>
       </div>
       ) : (
-      <div className="card border-0 shadow-sm rounded-3">
+      <div className="card border-0 rounded-4 patients-surface-card">
         <div className="card-body p-4">
           <div className="table-responsive">
-            <table className="table table-hover align-middle m-0 patients-mobile-list">
+            <table className="table table-hover align-middle m-0 patients-mobile-list patients-table">
               <thead className="table-light">
                 <tr>
                   <th>Nome do Paciente</th>
@@ -433,6 +372,5 @@ export const Patients = () => {
       </div>
     )}
     </div>
-    </>
   );
 };
