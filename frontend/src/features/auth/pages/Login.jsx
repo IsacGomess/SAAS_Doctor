@@ -114,10 +114,10 @@ function Login() {
                   {/* Lista de Benefícios */}
                   <div className="benefits mt-5">
                     <div className="benefit-item">
-                      <div className="benefit-icon " style={{fontSize:'40px',color:"white"}}><i className="bi bi-globe-americas-fill pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Gestão Eficiente</strong></div>
+                      <div className="benefit-icon " style={{fontSize:'40px',color:"white"}}><i className="bi bi-globe-americas-fill pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Gestão Otimizada</strong></div>
                       <div>
                         
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Entenda quanto você  faturou e acompanhe seus números sem depender de planilhas.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Entenda quanto você  faturou e acompanhe seus números sem depender de planilhas com design para celular, tablet e computador.</p>
                       </div>
                     </div>
                     
@@ -125,19 +125,19 @@ function Login() {
                       <div className="benefit-icon" style={{fontSize: '40px', color:"white"}}><i className="bi bi-calendar-day pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Agenda Digital</strong></div>
                       <div>
                       
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Visualize seus atendimentos e organize sua rotina em poucos segundos.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Ganhe tempo e visualize seus atendimentos e organize sua rotina em poucos segundos.</p>
                       </div>
                     </div>
 
                     <div className="benefit-item">
-                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-calendar2-plus ms-0 pe-4 "></i><strong style={{color:"white",fontSize:'20px'}}>Prontuários</strong></div>
+                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-calendar2-plus ms-0 pe-4 "></i><strong style={{color:"white",fontSize:'20px'}}>Prontuários, Evoluções e Recomendações</strong></div>
                       <div>
-                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Tenha todo o histórico do paciente organizado em um só lugar.</p>
+                        <p className="small opacity-75 mb-0" style={{color:"white"}}>Tenha todo o histórico do paciente organizado em um só lugar, envie de forma digital recomendações aos seus pacientes gerando valor de Atendimento.</p>
                       </div>
                     </div>
 
                     <div className="benefit-item mt-4">
-                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-shield-check pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Segurança Jurídica</strong></div>
+                      <div className="benefit-icon" style={{fontSize:'40px', color:"white"}}><i className="bi bi-shield-check pe-3"></i><strong style={{color:"white",fontSize:'20px'}}>Seguro e Eficiente</strong></div>
                       <div>
                         <p className="small opacity-75 mb-0" style={{color:"white"}}>
                           Menos sistemas. Menos planilhas. Menos complicação.

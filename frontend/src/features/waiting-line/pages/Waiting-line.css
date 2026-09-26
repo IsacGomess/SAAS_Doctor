@@ -5,8 +5,10 @@
 .doctor-dashboard {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100vh;
     width: 100%;
+    padding-top: 76px;
+    box-sizing: border-box;
     background-color: #1e6b65;
     background: linear-gradient(135deg, #1e6b65 0%, #155350 100%);
 }
@@ -29,13 +31,13 @@
 /* Cabeçalho do dashboard */
 .dashboard-header {
     position: fixed;
-    top: 0;
+    top: 76px;
     left: 20%;
-    padding: 8px 12px;
+    padding: 6px 12px;
     height: auto;
-    min-height:100px;
+    min-height: 88px;
     width: 80%;
-    gap: 12px;
+    gap: 8px;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
@@ -49,6 +51,26 @@
 
 .header-content {
     flex: 1;
+}
+
+.header-top {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.header-top h3 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.greeting {
+    margin: 0;
+    font-size: 11px;
+    opacity: 0.9;
 }
 
 .dashboard-title {
@@ -70,31 +92,31 @@
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .header-controls .header-action-btn {
-    min-width: 120px;
-    padding: 8px 12px;
-    font-size: 13px;
+    min-width: 108px;
+    padding: 7px 10px;
+    font-size: 12px;
     font-weight: 600;
     border-radius: 8px;
     white-space: nowrap;
 }
 
 .header-controls .btn:not(.header-action-btn) {
-    min-width: 120px;
+    min-width: 108px;
 }
 
 /* Seletor de área da clínica */
 .clinic-area-selector {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     background-color: rgba(255, 255, 255, 0.1);
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-radius: 6px;
-    min-width: 220px;
+    min-width: 200px;
     flex: 1 1 auto;
 }
 
@@ -107,11 +129,12 @@
 
 .clinic-area-badge {
     flex: 1 1 auto;
-    min-width: 140px;
+    min-width: 120px;
+    font-size: 12px;
 }
 
 .selector-label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -129,8 +152,8 @@
 }
 
 .clinic-area-selector .btn {
-    padding: 6px 12px;
-    font-size: 12px;
+    padding: 5px 10px;
+    font-size: 11px;
     background-color: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.3);
     color: white;
@@ -377,10 +400,27 @@
         width: 100%;
         padding: 8px;
         height: auto;
-        min-height: 80px;
+        min-height: 0;
         border-radius: 0;
-        gap: 6px;
-        align-items: center;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .header-content {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .header-top {
+        width: 100%;
+    }
+
+    .header-top h3 {
+        font-size: 13px;
+    }
+
+    .greeting {
+        font-size: 10px;
     }
 
     .dashboard-title {
@@ -397,41 +437,72 @@
         grid-template-columns: 1fr;
         gap: 12px;
         padding: 12px;
-        padding-top: 90px;
+        padding-top: 150px;
     }
 
     .header-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
         gap: 6px;
         width: 100%;
         justify-content: flex-start;
+        align-items: stretch;
     }
 
     .header-controls .header-action-btn {
-        min-width: 80px;
+        width: auto;
+        flex: 1 1 120px;
+        min-width: 0;
         padding: 5px 8px;
-        font-size: 11px;
+        font-size: 10px;
+    }
+
+    .header-controls .btn:not(.header-action-btn) {
+        width: auto;
+        flex: 1 1 120px;
+        min-width: 0;
     }
 
     .clinic-area-selector {
+        width: 100%;
         padding: 6px 8px;
         font-size: 10px;
         min-width: auto;
         gap: 4px;
+        flex-direction: row;
+        align-items: center;
     }
 
     .clinic-area-display {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
         gap: 4px;
     }
 
     .clinic-area-badge {
-        min-width: 80px;
+        width: auto;
+        flex: 1 1 110px;
+        min-width: 0;
+        font-size: 10px;
+    }
+
+    .selector-label {
         font-size: 10px;
     }
 
     .area-badge {
-        min-width: 70px;
+        width: auto;
+        flex: 1 1 110px;
+        min-width: 0;
         font-size: 10px;
         padding: 3px 6px;
+    }
+
+    .clinic-area-selector .btn {
+        width: auto;
+        flex: 0 0 auto;
     }
 
     .status-text {
@@ -456,6 +527,39 @@
 
     .right-column {
         min-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .doctor-dashboard {
+        padding-top: 72px;
+    }
+
+    .dashboard-header {
+        top: 72px;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .header-top h3 {
+        font-size: 12px;
+    }
+
+    .greeting {
+        font-size: 9px;
+    }
+
+    .dashboard-content {
+        padding-top: 165px;
+    }
+
+    .two-columns .column-title {
+        font-size: 13px;
+    }
+
+    .left-column,
+    .right-column {
+        min-height: 280px;
     }
 }
 
@@ -504,4 +608,570 @@
         background-color: #1e1e1e;
         border-color: #404040;
     }
+}
+.waiting-header {
+  padding: 1.25rem;
+  border-radius: 18px;
+  margin-bottom: 1.25rem;
+}
+
+.waiting-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.waiting-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.13);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.waiting-header-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.waiting-header-subtitle {
+  opacity: 0.8;
+}
+
+.waiting-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.waiting-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.waiting-toolbar-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.waiting-btn {
+  min-height: 44px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  font-weight: 600;
+}
+
+.waiting-area-control {
+  min-width: 270px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.waiting-area-label {
+  display: block;
+  opacity: 0.7;
+  font-size: 0.72rem;
+  margin-bottom: 0.15rem;
+}
+
+.waiting-area-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.waiting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.waiting-section {
+  min-width: 0;
+}
+
+.waiting-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.waiting-section-heading h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.waiting-section-kicker {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+  margin-bottom: 0.15rem;
+}
+
+.waiting-count {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 0.55rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* =========================================================
+   RESPONSIVIDADE NOVA - FILA DE ESPERA
+   ========================================================= */
+
+/* Desktop / notebook menor */
+@media (max-width: 1200px) {
+
+  .waiting-header {
+    padding: 0.85rem 1rem;
+  }
+
+  .waiting-toolbar {
+    gap: 0.65rem;
+  }
+
+  .waiting-btn {
+    min-height: 36px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .waiting-area-control {
+    min-width: 220px;
+    padding: 0.5rem 0.65rem;
+  }
+}
+
+
+/* Enquanto ainda existe espaço lateral */
+@media (max-width: 991px) and (min-width: 769px) {
+
+  /*
+   * Evita a regra antiga do dashboard que joga
+   * o header para left: 0 cedo demais.
+   */
+  .dashboard-header.waiting-header {
+    left: 20%;
+    width: 80%;
+  }
+
+  .waiting-header-main {
+    margin-bottom: 0.65rem;
+  }
+
+  .waiting-toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .waiting-toolbar-actions {
+    flex: 0 0 auto;
+  }
+
+  .waiting-toolbar-actions .btn {
+    width: auto;
+  }
+
+  .waiting-area-control {
+    min-width: 210px;
+    width: auto;
+    margin-left: auto;
+  }
+
+  .waiting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /*
+   * O cabeçalho novo ocupa um pouco mais de espaço.
+   */
+  .dashboard-content.waiting-grid {
+    padding-top: 135px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVIDADE DEFINITIVA - WAITING LINE
+   ========================================================= */
+
+/* Notebook menor / tablet */
+@media (max-width: 992px) {
+
+  /*
+   * O header deixa de ser FIXED.
+   * Isso elimina a sobreposição com menu/sidebar
+   * e com o conteúdo.
+   */
+  .doctor-dashboard .dashboard-header.waiting-header {
+    position: static !important;
+
+    top: auto !important;
+    left: auto !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    min-height: auto !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 12px !important;
+
+    box-sizing: border-box;
+
+    border-radius: 0 !important;
+  }
+
+  /*
+   * Como o header agora está no fluxo normal,
+   * não precisamos mais dos 100/150/165px
+   * usados anteriormente.
+   */
+  .doctor-dashboard .dashboard-content.waiting-grid {
+    padding-top: 16px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .waiting-header-main {
+    width: 100%;
+    margin-bottom: 10px;
+
+    align-items: center;
+    gap: 8px;
+  }
+
+  .waiting-header-icon {
+    width: 36px;
+    height: 36px;
+
+    font-size: 16px;
+
+    border-radius: 9px;
+  }
+
+  .waiting-header-title {
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .waiting-header-subtitle {
+    font-size: 11px;
+  }
+
+  .waiting-plan-badge {
+    margin-left: auto;
+
+    padding: 4px 8px;
+
+    font-size: 10px;
+
+    flex-shrink: 0;
+  }
+
+  /* TOOLBAR */
+
+  .waiting-toolbar {
+    width: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+  }
+
+  .waiting-toolbar-actions {
+    display: flex;
+
+    flex: 0 0 auto;
+
+    flex-direction: row;
+
+    gap: 6px;
+  }
+
+  /*
+   * Impede Bootstrap/CSS antigo de expandir
+   * os botões.
+   */
+  .waiting-toolbar-actions .waiting-btn {
+    width: auto !important;
+
+    min-width: 0 !important;
+    min-height: 32px !important;
+
+    flex: 0 0 auto !important;
+
+    padding: 5px 9px !important;
+
+    font-size: 11px !important;
+
+    white-space: nowrap;
+  }
+
+  /* ÁREA DA CLÍNICA */
+
+  .waiting-area-control {
+    width: auto !important;
+
+    min-width: 190px !important;
+
+    flex: 0 1 auto;
+
+    padding: 6px 8px;
+
+    gap: 8px;
+  }
+
+  .waiting-area-label {
+    font-size: 9px;
+  }
+
+  .waiting-area-name {
+    font-size: 11px;
+  }
+
+  .waiting-area-control .btn {
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    padding: 4px 7px !important;
+
+    font-size: 10px !important;
+
+    flex: 0 0 auto !important;
+  }
+
+  .waiting-section {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 576px) {
+
+  .doctor-dashboard {
+    /*
+     * Mantém somente o espaço da navbar principal,
+     * não da waiting-line.
+     */
+    padding-top: 72px;
+    overflow-x: hidden;
+  }
+
+  .doctor-dashboard .dashboard-header.waiting-header {
+    padding: 10px !important;
+  }
+
+  /* CABEÇALHO */
+
+  .waiting-header-main {
+    display: grid;
+
+    grid-template-columns: 34px minmax(0, 1fr);
+
+    column-gap: 8px;
+    row-gap: 6px;
+
+    align-items: center;
+
+    margin-bottom: 10px;
+  }
+
+  .waiting-header-icon {
+    width: 34px;
+    height: 34px;
+
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /*
+   * O bloco que contém título/nome ocupa
+   * somente o espaço disponível.
+   */
+  .waiting-header-main > .d-flex {
+    display: contents !important;
+  }
+
+  .waiting-header-main > .d-flex > div:last-child {
+    grid-column: 2;
+    grid-row: 1;
+
+    min-width: 0;
+  }
+
+  .waiting-header-title {
+    font-size: 14px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .waiting-header-subtitle {
+    display: block;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /*
+   * Assinatura fica em uma linha própria.
+   */
+  .waiting-plan-badge {
+    grid-column: 1 / -1;
+    grid-row: 2;
+
+    justify-self: start;
+
+    margin-left: 0;
+
+    font-size: 9px;
+
+    padding: 3px 7px;
+  }
+
+  /* TOOLBAR */
+
+  .waiting-toolbar {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+  }
+
+  .waiting-toolbar-actions {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: row;
+
+    gap: 6px;
+  }
+
+  .waiting-toolbar-actions .waiting-btn {
+    width: auto !important;
+
+    flex: 0 0 auto !important;
+
+    padding: 5px 8px !important;
+
+    min-height: 30px !important;
+
+    font-size: 10px !important;
+  }
+
+  /*
+   * Área ocupa uma linha separada.
+   */
+  .waiting-area-control {
+    width: 100% !important;
+    min-width: 0 !important;
+
+    box-sizing: border-box;
+
+    padding: 6px 8px;
+  }
+
+  .waiting-area-name {
+    font-size: 10px;
+  }
+
+  .waiting-area-control .btn {
+    padding: 3px 7px !important;
+
+    font-size: 9px !important;
+  }
+
+  /* CONTEÚDO */
+
+  .doctor-dashboard .dashboard-content.waiting-grid {
+    padding: 12px 8px !important;
+
+    gap: 14px !important;
+  }
+
+  .waiting-section-heading {
+    margin-bottom: 7px;
+  }
+
+  .waiting-section-heading h4 {
+    font-size: 13px;
+  }
+
+  .waiting-section-kicker {
+    font-size: 9px;
+  }
+
+  .waiting-count {
+    min-width: 25px;
+    height: 25px;
+
+    padding: 0 7px;
+
+    font-size: 10px;
+  }
 }

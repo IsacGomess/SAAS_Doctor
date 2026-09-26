@@ -177,8 +177,8 @@ const ClinicSchedule = () => {
       {/* Cabeçalho */}
       <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
         <div className="schedule-heading-wrap">
-          <h2 className="fw-bold m-0 schedule-title">Agenda da Clínica</h2>
-          <p className="text-muted m-0 schedule-subtitle">Gerencie os horários e consultas dos seus pacientes.</p>
+          <h2 className="fw-bold m-0 schedule-title">Agendamentos</h2>
+          <p className="text-muted m-0 schedule-subtitle">Gerencie os horários de atendimentos dos seus pacientes selecionando o dia desejado.</p>
         </div>
         {/* Filtro de Data Global */}
         <div className="d-flex align-items-center gap-2 schedule-date-filter">
