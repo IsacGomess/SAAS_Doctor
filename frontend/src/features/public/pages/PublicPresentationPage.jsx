@@ -106,7 +106,7 @@ export default function PublicPresentationPage() {
           Agendamentos, prontuários e relatórios em um único fluxo.
         </h1>
         <p className="med1pe-hero-subtitle">
-          O MED1PE organiza o dia da equipe com visão clara da agenda, histórico clínico e indicadores de desempenho em tempo real.
+          O MED1PE faz você economizar tempo, visualizar seus ganhos assim que você muda do status do paciente para atendido, e acompanhar indicadores de desempenho em tempo real.
         </p>
 
         <div className="med1pe-hero-cta">

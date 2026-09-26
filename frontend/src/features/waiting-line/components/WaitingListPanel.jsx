@@ -91,7 +91,7 @@ export function WaitingListPanel({
                         <span className="badge bg-secondary">0</span>
                     </div>
                     <div className="empty-state">
-                        <p className="text-muted">Nenhum paciente na fila no momento</p>
+                        <p className="text-muted bg-success rounded">Nenhum paciente na fila no momento</p>
                     </div>
                 </div>
 

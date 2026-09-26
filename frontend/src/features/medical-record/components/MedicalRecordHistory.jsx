@@ -331,7 +331,7 @@ const MedicalRecordHistory = () => {
         {/* 1. CABEÇALHO DA CLÍNICA */}
         <div className="doc-clinic-header">
           <h2>Med1PE<small style={{ fontSize: '0.6rem' }}>.com.br</small></h2>
-          <p className="doc-subtitle">{clinicName}</p>
+          <p className="doc-subtitle">{clinicName.toUpperCase()}</p>
           <div className="doc-divider"></div>
         </div>
 
