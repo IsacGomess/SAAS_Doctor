@@ -75,6 +75,15 @@ export const cancelItem = async (patientId, type, itemId) => {
     }
 };
 
+export const signItem = async (patientId, type, itemId) => {
+    try {
+        const response = await api.post(`/api/patients/${patientId}/sign-item`, { type, itemId });
+        return response.data;
+    } catch (err) {
+        throw err.response?.data || { message: 'Erro ao registrar assinaturas' };
+    }
+};
+
 export default {
     createMedicalRecord,
     createEvolution,
@@ -84,4 +93,5 @@ export default {
     getEvolutions,
     getPrescriptions,
     cancelItem,
+    signItem,
 };

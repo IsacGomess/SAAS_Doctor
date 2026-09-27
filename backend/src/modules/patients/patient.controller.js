@@ -7,6 +7,7 @@ const {
   prescriptionSchema,
   patientIdParamSchema
   , cancelItemSchema
+  , signItemSchema
 } = require('./patient.validator.js');
 
 // Authorization is centralized in PatientService.findAccessiblePatient
@@ -291,5 +292,65 @@ exports.cancelItem = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Dados inválidos.', errors: error.flatten().fieldErrors });
     }
     return res.status(500).json({ message: 'Erro ao cancelar item', error: error.message });
+  }
+};
+
+exports.signItem = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const { itemId, type } = signItemSchema.parse(req.body);
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+
+    let Model;
+    if (type === 'evolution') Model = require('./evolution.model.js');
+    else if (type === 'medicalRecord') Model = require('./medicalRecord.model.js');
+    else if (type === 'prescription') Model = require('./prescription.model.js');
+    else return res.status(400).json({ success: false, message: 'Tipo inválido' });
+
+    const doc = await Model.findOne({ _id: itemId, patientId });
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Item não encontrado' });
+    }
+
+    if (doc.canceled) {
+      return res.status(409).json({ success: false, message: 'Não é possível registrar assinatura em item cancelado.' });
+    }
+
+    if (doc.signingRecord?.completed) {
+      return res.status(409).json({ success: false, message: 'As assinaturas deste item já foram registradas.' });
+    }
+
+    // Recepcionistas seguem a mesma regra de acesso aplicada nas seções clínicas.
+    if (isRecepcionistaWithoutProfessionalPlan(req)) {
+      return res.status(403).json({ success: false, message: 'Acesso negado.' });
+    }
+
+    // Em contexto de clínica, mantém a regra de ownership (autor/admin).
+    // Em contexto Professional (sem clínica), o acesso já é garantido por findAccessiblePatient.
+    if (req.clinicaId && req.user && req.user.role !== 'administrador') {
+      if (!doc.belongsTo || doc.belongsTo.toString() !== req.userId.toString()) {
+        return res.status(403).json({ success: false, message: 'Apenas o autor ou administrador pode registrar assinaturas deste item.' });
+      }
+    }
+
+    const updated = await PatientService.signItem(patientId, type, itemId, req.userId);
+    if (!updated) {
+      return res.status(409).json({ success: false, message: 'Não foi possível concluir a sessão de assinaturas. Atualize e tente novamente.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Assinaturas registradas com sucesso.',
+      item: updated
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Dados inválidos.', errors: error.flatten().fieldErrors });
+    }
+
+    return res.status(500).json({ message: 'Erro ao registrar assinaturas', error: error.message });
   }
 };

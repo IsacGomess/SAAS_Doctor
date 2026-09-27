@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const signingRecordSchema = require('./signingRecord.schema.js');
 
 const prescriptionSchema = new mongoose.Schema({
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
@@ -17,6 +18,7 @@ const prescriptionSchema = new mongoose.Schema({
     canceled: { type: Boolean, default: false },
     canceledAt: { type: Date, default: null },
     canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    signingRecord: { type: signingRecordSchema, default: () => ({}) },
 }, { timestamps: true });
 
 const Prescription = mongoose.model('Prescription', prescriptionSchema, 'prescriptions');

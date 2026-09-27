@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const signingRecordSchema = require('./signingRecord.schema.js');
 
 const evolutionSchema = new mongoose.Schema({
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
@@ -13,6 +14,7 @@ const evolutionSchema = new mongoose.Schema({
     canceled: { type: Boolean, default: false },
     canceledAt: { type: Date, default: null },
     canceledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    signingRecord: { type: signingRecordSchema, default: () => ({}) },
 }, { timestamps: true });
 
 const Evolution = mongoose.models.Evolution || mongoose.model('Evolution', evolutionSchema, 'evolutions');

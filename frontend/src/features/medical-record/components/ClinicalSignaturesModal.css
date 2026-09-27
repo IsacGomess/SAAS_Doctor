@@ -1,0 +1,31 @@
+.clinical-signature-modal {
+  z-index: 1080;
+}
+
+.clinical-signature-backdrop {
+  z-index: 1070;
+}
+
+.clinical-signature-modal .modal-content {
+  border-radius: 10px;
+}
+
+.clinical-signature-canvas-wrapper {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.clinical-signature-canvas {
+  width: 100%;
+  display: block;
+  touch-action: none;
+}
+
+@media (max-width: 576px) {
+  .clinical-signature-modal .modal-dialog {
+    margin: 0.75rem;
+  }
+}

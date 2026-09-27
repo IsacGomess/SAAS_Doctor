@@ -79,6 +79,11 @@ const cancelItemSchema = z.object({
   type: z.enum(['evolution', 'medicalRecord', 'prescription'])
 });
 
+const signItemSchema = z.object({
+  itemId: objectIdSchema,
+  type: z.enum(['evolution', 'medicalRecord', 'prescription'])
+});
+
 module.exports = {
   registerPatientSchema,
   medicalRecordSchema,
@@ -86,4 +91,5 @@ module.exports = {
   prescriptionSchema,
   patientIdParamSchema
   , cancelItemSchema
+  , signItemSchema
 };
