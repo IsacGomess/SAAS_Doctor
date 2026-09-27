@@ -22,5 +22,6 @@ routes.get('/:patientId/get-evolutions', patientController.getEvolutions);
 routes.post('/create-prescription', patientController.prescription);
 routes.get('/:patientId/get-prescriptions', patientController.getPrescriptions);
 routes.post('/:patientId/cancel-item', patientController.cancelItem);
+routes.post('/:patientId/sign-item', patientController.signItem);
 
 module.exports = routes;

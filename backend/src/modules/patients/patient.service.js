@@ -4,6 +4,13 @@ const MedicalRecord = require('./medicalRecord.model.js');
 const Evolution = require('./evolution.model.js');
 const Prescription = require('./prescription.model.js');
 
+const resolveClinicalModel = (type) => {
+    if (type === 'evolution') return Evolution;
+    if (type === 'medicalRecord') return MedicalRecord;
+    if (type === 'prescription') return Prescription;
+    return null;
+};
+
 class PatientService {
     // Busca um paciente por ID para checar permissões
     async findPatientById(patientId) {
@@ -67,6 +74,7 @@ class PatientService {
         return await MedicalRecord.find({ patientId })
             .populate('belongsTo', 'name registroProf')
             .populate('canceledBy', 'name registroProf')
+            .populate('signingRecord.recordedBy', 'name registroProf')
             .sort({ createdAt: -1 });
     }
 
@@ -86,6 +94,7 @@ class PatientService {
         return await Evolution.find({ patientId })
             .populate('belongsTo', 'name registroProf')
             .populate('canceledBy', 'name registroProf')
+            .populate('signingRecord.recordedBy', 'name registroProf')
             .sort({ createdAt: -1 });
     }
 
@@ -104,16 +113,14 @@ class PatientService {
         return await Prescription.find({ patientId })
             .populate('belongsTo', 'name registroProf')
             .populate('canceledBy', 'name registroProf')
+            .populate('signingRecord.recordedBy', 'name registroProf')
             .sort({ createdAt: -1 });
     }
 
     // Marca um item (evolução, prontuário ou prescrição) como cancelado (visual), registra quem e quando
     async cancelItem(patientId, type, itemId, userId) {
-        let Model;
-        if (type === 'evolution') Model = Evolution;
-        else if (type === 'medicalRecord') Model = MedicalRecord;
-        else if (type === 'prescription') Model = Prescription;
-        else throw new Error('Tipo inválido');
+        const Model = resolveClinicalModel(type);
+        if (!Model) throw new Error('Tipo inválido');
 
         const doc = await Model.findOne({ _id: itemId, patientId });
         if (!doc) throw new Error('Item não encontrado');
@@ -125,6 +132,33 @@ class PatientService {
         await doc.save();
         // Popula usuário que cancelou antes de retornar
         return await Model.findById(doc._id).populate('canceledBy', 'name registroProf');
+    }
+
+    async signItem(patientId, type, itemId, userId) {
+        const Model = resolveClinicalModel(type);
+        if (!Model) throw new Error('Tipo inválido');
+
+        const signed = await Model.findOneAndUpdate(
+            {
+                _id: itemId,
+                patientId,
+                canceled: { $ne: true },
+                'signingRecord.completed': { $ne: true }
+            },
+            {
+                $set: {
+                    'signingRecord.completed': true,
+                    'signingRecord.completedAt': new Date(),
+                    'signingRecord.recordedBy': userId,
+                    'signingRecord.method': 'signature_screen'
+                }
+            },
+            {
+                returnDocument: 'after'
+            }
+        ).populate('signingRecord.recordedBy', 'name registroProf');
+
+        return signed;
     }
 }
 

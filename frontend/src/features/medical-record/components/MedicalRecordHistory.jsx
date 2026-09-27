@@ -9,9 +9,11 @@ import {
   createMedicalRecord,
   createPrescription,
   cancelItem,
+  signItem,
 } from '../services/medicalRecordService';
 import { getSubscription } from '../../../services/billing';
 import { createPortal } from 'react-dom';
+import ClinicalSignaturesModal from './ClinicalSignaturesModal';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -57,6 +59,12 @@ const MedicalRecordHistory = () => {
   const [selectedMedicalRecordId, setSelectedMedicalRecordId] = useState(null);
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [signatureModal, setSignatureModal] = useState({
+    open: false,
+    type: null,
+    item: null,
+  });
+  const [signatureSubmitting, setSignatureSubmitting] = useState(false);
 
   // 💡 ESTADO CENTRAL DE IMPRESSÃO
   const [printData, setPrintData] = useState(null);
@@ -125,6 +133,24 @@ const MedicalRecordHistory = () => {
     };
     loadHistory();
   }, [patientId]);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      if (!printData?.signatures) return;
+
+      setPrintData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          signatures: null,
+          signingRecordForPrint: null
+        };
+      });
+    };
+
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, [printData]);
 
   const shouldBlockRecepcionistaSections = userRole === 'recepcionista' && subscriptionPlan !== 'professional';
 
@@ -224,6 +250,79 @@ const MedicalRecordHistory = () => {
     }, 250);
   };
 
+  const openSignaturesModal = (type, item) => {
+    setSignatureModal({
+      open: true,
+      type,
+      item,
+    });
+  };
+
+  const closeSignaturesModal = () => {
+    if (signatureSubmitting) return;
+    setSignatureModal({
+      open: false,
+      type: null,
+      item: null,
+    });
+  };
+
+  const handleConfirmSignatures = async ({ patientSignature, professionalSignature }) => {
+    if (!signatureModal.item || !signatureModal.type || !patientId) return;
+
+    if (!patientSignature || !professionalSignature) {
+      alert('As duas assinaturas são obrigatórias.');
+      return;
+    }
+
+    setSignatureSubmitting(true);
+    try {
+      const response = await signItem(patientId, signatureModal.type, signatureModal.item._id);
+      const updatedItem = response?.item || signatureModal.item;
+
+      setSignatureModal({
+        open: false,
+        type: null,
+        item: null,
+      });
+      await refreshHistory();
+
+      setPrintData({
+        type: signatureModal.type,
+        item: updatedItem,
+        section: signatureModal.type === 'evolution' ? 'evolution' : undefined,
+        signatures: {
+          patientSignature,
+          professionalSignature
+        },
+        signingRecordForPrint: updatedItem?.signingRecord || null
+      });
+
+      setTimeout(() => {
+        window.print();
+      }, 250);
+    } catch (err) {
+      alert('Erro ao registrar assinaturas: ' + (err?.message || 'Tente novamente'));
+    } finally {
+      setSignatureSubmitting(false);
+    }
+  };
+
+  const renderSigningStatus = (item) => {
+    if (!item?.signingRecord?.completed) return null;
+    const completedAtLabel = item?.signingRecord?.completedAt ? formatDate(item.signingRecord.completedAt) : null;
+
+    return (
+      <span className="d-inline-flex flex-column">
+        <small className="text-success d-inline-flex align-items-center gap-1">
+          <i className="bi bi-check2"></i>
+          Assinaturas registradas{completedAtLabel ? ` - ${completedAtLabel}` : ''}
+        </small>
+        <small className="text-muted">Imagens não são armazenadas para nova impressão.</small>
+      </span>
+    );
+  };
+
   const renderPatientHeaderBox = (patientData, professionalData, createdAt) => (
     <div className="doc-patient-box">
       <div className="doc-patient-row">
@@ -315,7 +414,7 @@ const MedicalRecordHistory = () => {
   // =========================================================================
   const renderOfficialPrintDocument = () => {
     if (!printData) return null;
-    const { type, item, section } = printData;
+    const { type, item, section, signatures, signingRecordForPrint } = printData;
     const professional = getProfessionalInfo();
     const clinicName = (localStorage.getItem('clinicName') || '').trim();
 
@@ -424,6 +523,31 @@ const MedicalRecordHistory = () => {
                   <p className="m-0 mt-1">{item.observations}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {signatures?.patientSignature && signatures?.professionalSignature && (
+            <div className="clinical-print-signatures-block">
+              <p className="clinical-print-signatures-title">ASSINATURAS</p>
+
+              <div className="clinical-print-signatures-grid">
+                <div className="clinical-print-signature-slot">
+                  <p className="clinical-print-signature-label">Paciente</p>
+                  <img src={signatures.patientSignature} alt="Assinatura do paciente" className="clinical-print-signature-image" />
+                  <p className="clinical-print-signature-name">{patient?.name || 'Paciente não informado'}</p>
+                </div>
+
+                <div className="clinical-print-signature-slot">
+                  <p className="clinical-print-signature-label">Profissional responsável</p>
+                  <img src={signatures.professionalSignature} alt="Assinatura do profissional" className="clinical-print-signature-image" />
+                  <p className="clinical-print-signature-name">{professional.userName}</p>
+                  <p className="clinical-print-signature-meta">Registro profissional: {professional.registroProf || 'Não informado'}</p>
+                </div>
+              </div>
+
+              <p className="clinical-print-signature-meta mt-2 mb-0">
+                Registrado em: {formatDate(signingRecordForPrint?.completedAt || item?.signingRecord?.completedAt || new Date())}
+              </p>
             </div>
           )}
         </div>
@@ -559,8 +683,16 @@ const MedicalRecordHistory = () => {
                                 🖨️ Imprimir
                               </button>
                               <button onClick={() => handleExportRecommendation(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                                📄 Recomendações ao paciente
+                                📄 Enviar Recomendações
                               </button>
+                              {item.signingRecord?.completed ? (
+                                <span className="d-inline-flex align-items-center px-2">{renderSigningStatus(item)}</span>
+                              ) : (
+                                <button onClick={() => openSignaturesModal('evolution', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                  <i className="bi bi-pen"></i>
+                                  Enviar Doc. Assinado
+                                </button>
+                              )}
                               <button onClick={() => handleCopyEvolution(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
                                 📋 Copiar
                               </button>
@@ -704,17 +836,27 @@ const MedicalRecordHistory = () => {
                                 <p className="mb-1"><strong>Historico Atual da Doença:</strong> {entry.diesease} | <strong>Comorbidades:</strong> {entry.comorbidities}</p>
                               </div>
                             ))}
-                            <button onClick={() => handleTriggerPrint('medicalRecord', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2">
-                              🖨️ Imprimir
-                            </button>
-                            <button onClick={() => handleCopyMedicalRecord(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
-                              📋 Copiar
-                            </button>
-                            {!canceled && (
-                              <button onClick={() => handleCancel('medicalRecord', item._id)} className={`btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 mt-2 ms-2`}>
-                                🗑️ Apagar
+                            <div className="d-flex flex-wrap gap-2 mt-2">
+                              <button onClick={() => handleTriggerPrint('medicalRecord', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                🖨️ Imprimir
                               </button>
-                            )}
+                              {item.signingRecord?.completed ? (
+                                <span className="d-inline-flex align-items-center px-2">{renderSigningStatus(item)}</span>
+                              ) : (
+                                <button onClick={() => openSignaturesModal('medicalRecord', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                  <i className="bi bi-pen"></i>
+                                  Enviar Doc. Assinado
+                                </button>
+                              )}
+                              <button onClick={() => handleCopyMedicalRecord(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                📋 Copiar
+                              </button>
+                              {!canceled && (
+                                <button onClick={() => handleCancel('medicalRecord', item._id)} className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
+                                  🗑️ Apagar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -873,17 +1015,27 @@ const MedicalRecordHistory = () => {
                             )}
                             <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Diagnóstico:</strong> {item.diagnosis?.description || 'Não informado'}</p>
                             <p className="mb-2" style={canceled ? { textDecoration: 'line-through', color: '#6c757d' } : undefined}><strong>Medicamentos:</strong> {item.medications?.map(m => m.name).join(', ') || 'Nenhum'}</p>
-                            <button onClick={() => handleTriggerPrint('prescription', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2">
-                              🖨️ Imprimir 
-                            </button>
-                            <button onClick={() => handleCopyPrescription(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 mt-2 ms-2">
-                              📋 Copiar 
-                            </button>
-                            {!canceled && (
-                              <button onClick={() => handleCancel('prescription', item._id)} className={`btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 mt-2 ms-2`}>
-                                🗑️ Apagar
+                            <div className="d-flex flex-wrap gap-2 mt-2">
+                              <button onClick={() => handleTriggerPrint('prescription', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                🖨️ Imprimir
                               </button>
-                            )}
+                              {item.signingRecord?.completed ? (
+                                <span className="d-inline-flex align-items-center px-2">{renderSigningStatus(item)}</span>
+                              ) : (
+                                <button onClick={() => openSignaturesModal('prescription', item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                  <i className="bi bi-pen"></i>
+                                  Enviar Doc. Assinado
+                                </button>
+                              )}
+                              <button onClick={() => handleCopyPrescription(item)} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                                📋 Copiar
+                              </button>
+                              {!canceled && (
+                                <button onClick={() => handleCancel('prescription', item._id)} className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
+                                  🗑️ Apagar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1070,6 +1222,56 @@ const MedicalRecordHistory = () => {
             print-color-adjust: exact;
           }
 
+          .clinical-print-signatures-block {
+            margin-top: 14px;
+            border-top: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            padding: 10px 0;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+
+          .clinical-print-signatures-title {
+            font-weight: 700;
+            font-size: 12px;
+            margin: 0 0 8px;
+            letter-spacing: 0.03em;
+          }
+
+          .clinical-print-signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+          }
+
+          .clinical-print-signature-slot {
+            min-width: 0;
+          }
+
+          .clinical-print-signature-label {
+            font-size: 11px;
+            margin: 0 0 6px;
+            font-weight: 600;
+          }
+
+          .clinical-print-signature-image {
+            display: block;
+            width: auto;
+            max-width: 100%;
+            max-height: 62px;
+            height: auto;
+            object-fit: contain;
+            border-bottom: 1px solid #111;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+          }
+
+          .clinical-print-signature-name,
+          .clinical-print-signature-meta {
+            margin: 0;
+            font-size: 10px;
+          }
+
           .doc-footer-signature {
             margin-top: auto;
             padding-top: 18px;
@@ -1210,6 +1412,14 @@ const MedicalRecordHistory = () => {
             widows: 3;
           }
 
+          .medical-print-root .clinical-print-signatures-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          .medical-print-root .clinical-print-signature-image {
+            max-height: 62px !important;
+          }
+
           .medical-print-root h3,
           .medical-print-root h4 {
             break-after: avoid;
@@ -1249,6 +1459,13 @@ const MedicalRecordHistory = () => {
       </div>,
       document.body
     )}
+
+      <ClinicalSignaturesModal
+        show={signatureModal.open}
+        loading={signatureSubmitting}
+        onClose={closeSignaturesModal}
+        onConfirm={handleConfirmSignatures}
+      />
 
       {/* RENDERIZAÇÃO DA TELA NORMAL DO SISTEMA */}
       <div className="no-print">
