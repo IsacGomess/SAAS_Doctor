@@ -232,8 +232,8 @@ exports.addMembro = async (req, res) => {
         }
 
         const currentUser = await User.findById(req.userId);
-        if (currentUser.role !== 'administrador') {
-            console.log('❌ Erro: usuário não é administrador. Role:', currentUser.role);
+        if (!currentUser || currentUser.role !== 'administrador') {
+            console.log('❌ Erro: usuário não é administrador. Role:', currentUser?.role);
             return res.status(403).json({
                 success: false,
                 message: 'Apenas administradores podem adicionar membros/Only administrators can add members'
@@ -259,27 +259,25 @@ exports.addMembro = async (req, res) => {
             isActive: true
         });
 
-        const seatSummary = await BillingService.getClinicSeatSummary(req.clinicaId);
-        const afterAddSummary = {
-            ...seatSummary,
-            activeProfessionalCount: seatSummary.activeProfessionalCount + (PROFESSIONAL_ROLES.includes(role) ? 1 : 0),
-            extraProfessionals: BillingService.calculateExtraProfessionalSeats(seatSummary.activeProfessionalCount + (PROFESSIONAL_ROLES.includes(role) ? 1 : 0))
-        };
+        const afterAddSummary =
+        await BillingService.getClinicSeatSummary(req.clinicaId);
 
         let seatSync = null;
+        let seatSyncError = false;
         if (PROFESSIONAL_ROLES.includes(role)) {
-            try {
-                seatSync = await BillingService.reconcileClinicSeatSubscription(req.clinicaId, {
-                    activeProfessionalCount: afterAddSummary.activeProfessionalCount
-                });
-            } catch (syncError) {
-                console.error('Erro ao sincronizar assentos extras do Stripe após criação de membro:', syncError);
-                return res.status(500).json({
-                    success: false,
-                    message: syncError.message || 'Configuração de cobrança pendente: STRIPE_PRICE_EXTRA_PROFESSIONAL ausente.'
-                });
-            }
+    try {
+        seatSync =
+            await BillingService.reconcileClinicSeatSubscription(
+                req.clinicaId
+            );
+    } catch (syncError) {
+        console.error(
+            'Erro ao sincronizar assentos extras do Stripe após criação de membro:',
+            syncError
+            );
+        seatSyncError = true;
         }
+    }
 
         console.log('✅ Membro criado:', newMembro._id, 'com clinicaId:', newMembro.clinicaId);
 
@@ -294,16 +292,17 @@ exports.addMembro = async (req, res) => {
                 clinicaId: newMembro.clinicaId
             },
             billing: {
-                includedSeats: 5,
+                includedSeats: afterAddSummary.includedSeats,
                 activeProfessionalCount: afterAddSummary.activeProfessionalCount,
                 extraProfessionals: afterAddSummary.extraProfessionals,
-                monthlyPriceCents: afterAddSummary.extraProfessionals > 0 ? afterAddSummary.extraProfessionals * 4990 : 0,
+                monthlyPriceCents: afterAddSummary.monthlyPriceCents,
                 billingCycleLabel: afterAddSummary.billingCycleLabel,
                 chargeAt: afterAddSummary.chargeAt,
                 note: afterAddSummary.extraProfessionals > 0
-                    ? `Há ${afterAddSummary.extraProfessionals} profissional(is) adicional(is) acima do limite de 5. O valor será cobrado no ${afterAddSummary.billingCycleLabel}.`
-                    : 'Dentro do limite de cinco profissionais incluídos.',
-                stripeSync: seatSync
+                    ? `Há ${afterAddSummary.extraProfessionals} profissional(is) adicional(is) acima do limite de ${afterAddSummary.includedSeats}. O valor será cobrado no ${afterAddSummary.billingCycleLabel}.`
+                    : `Dentro do limite de ${afterAddSummary.includedSeats} profissionais incluídos.`,
+                stripeSync: seatSync,
+                stripeSyncError: seatSyncError
             }
         });
     } catch (error) {

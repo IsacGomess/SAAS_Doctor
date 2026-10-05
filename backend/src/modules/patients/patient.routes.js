@@ -14,7 +14,14 @@ routes.use(csrfMiddleware.doubleCsrfProtection);
 
 // Rotas de pacientes
 routes.get('/atendance-list', patientController.getPatients);
+routes.get('/list', patientController.getPatientsPage);
 routes.post('/register-patient', patientController.registerPatient);
+routes.get('/:patientId/financial-summary', patientController.getPatientFinancialSummary);
+routes.get('/:patientId/charges', patientController.getPatientCharges);
+routes.post('/:patientId/charges', patientController.createPatientCharge);
+routes.patch('/:patientId/charges/:chargeId', patientController.updatePatientCharge);
+routes.post('/:patientId/charges/:chargeId/payments', patientController.createPatientPayment);
+routes.patch('/:patientId', patientController.updatePatient);
 routes.post('/create-medical-record', patientController.medicalRecord);
 routes.get('/:patientId/get-medical-records', patientController.getMedicalRecords);
 routes.post('/create-evolution', patientController.evolution);

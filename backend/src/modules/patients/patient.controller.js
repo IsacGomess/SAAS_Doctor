@@ -1,13 +1,20 @@
 const { ZodError } = require('zod');
 const PatientService = require('./patient.service.js');
+const Appointment = require('../appointments/appointment.model.js');
+const PatientCharge = require('./patient-financial.model.js');
 const {
   registerPatientSchema,
+  updatePatientSchema,
   medicalRecordSchema,
   evolutionSchema,
   prescriptionSchema,
-  patientIdParamSchema
-  , cancelItemSchema
-  , signItemSchema
+  patientListQuerySchema,
+  patientFinancialMonthSchema,
+  patientChargeSchema,
+  patientPaymentSchema,
+  patientIdParamSchema,
+  cancelItemSchema,
+  signItemSchema
 } = require('./patient.validator.js');
 
 // Authorization is centralized in PatientService.findAccessiblePatient
@@ -59,6 +66,163 @@ exports.getPatients = async (req, res) => {
     return res.status(200).json({ success: true, patients });
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao obter pacientes', error: error.message });
+  }
+};
+
+exports.getPatientsPage = async (req, res) => {
+  try {
+    const query = patientListQuerySchema.parse(req.query);
+    const result = await PatientService.getPatientsPage(req.userId, req.clinicaId, query);
+    return res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Parâmetros de paginação inválidos.', errors: error.flatten().fieldErrors });
+    }
+    return res.status(500).json({ message: 'Erro ao listar pacientes paginados', error: error.message });
+  }
+};
+
+exports.getPatientFinancialSummary = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const { month } = patientFinancialMonthSchema.parse(req.query);
+    const summary = await PatientService.getPatientFinancialSummary(patientId, req.userId, req.clinicaId, month || PatientService.getCurrentMonthKey());
+    return res.status(200).json({ success: true, summary });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Parâmetros inválidos.', errors: error.flatten().fieldErrors });
+    }
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+    return res.status(500).json({ message: 'Erro ao consultar financeiro do paciente', error: error.message });
+  }
+};
+
+exports.getPatientCharges = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const charges = await PatientService.getPatientCharges(patientId, req.userId, req.clinicaId);
+    return res.status(200).json({ success: true, charges });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'ID do paciente inválido', errors: error.flatten().fieldErrors });
+    }
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+    return res.status(500).json({ message: 'Erro ao consultar cobranças do paciente', error: error.message });
+  }
+};
+
+exports.createPatientCharge = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const payload = patientChargeSchema.parse(req.body);
+    const charge = await PatientService.createPatientCharge(patientId, req.userId, req.clinicaId, payload);
+    return res.status(201).json({ success: true, charge });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Dados da cobrança inválidos.', errors: error.flatten().fieldErrors });
+    }
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+    if (error.message === 'INVALID_CHARGE_DESCRIPTION' || error.message === 'INVALID_CHARGE_AMOUNT' || error.message === 'INVALID_DUE_DATE') {
+      return res.status(400).json({ success: false, message: 'Dados da cobrança inválidos.' });
+    }
+    if (error.message === 'DUPLICATE_CHARGE') {
+      return res.status(409).json({ success: false, message: 'Já existe uma cobrança duplicada para esse paciente, período e descrição.' });
+    }
+    return res.status(500).json({ message: 'Erro ao criar cobrança', error: error.message });
+  }
+};
+
+exports.updatePatientCharge = async (req, res) => {
+  try {
+    const { patientId, chargeId } = req.params;
+    if (!patientId || !chargeId) {
+      return res.status(400).json({ success: false, message: 'Parâmetros inválidos.' });
+    }
+
+    const payload = patientChargeSchema.partial().parse(req.body);
+    const charge = await PatientService.updatePatientCharge(patientId, chargeId, req.userId, req.clinicaId, payload);
+    return res.status(200).json({ success: true, charge });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Dados da cobrança inválidos.', errors: error.flatten().fieldErrors });
+    }
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+    if (error.message === 'CHARGE_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Cobrança não encontrada' });
+    }
+    return res.status(500).json({ message: 'Erro ao atualizar cobrança', error: error.message });
+  }
+};
+
+exports.createPatientPayment = async (req, res) => {
+  try {
+    const { patientId, chargeId } = req.params;
+    if (!patientId || !chargeId) {
+      return res.status(400).json({ success: false, message: 'Parâmetros inválidos.' });
+    }
+
+    const payload = patientPaymentSchema.parse(req.body);
+    const charge = await PatientService.addPaymentToCharge(patientId, chargeId, req.userId, req.clinicaId, payload);
+    return res.status(201).json({ success: true, charge });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ success: false, message: 'Dados do pagamento inválidos.', errors: error.flatten().fieldErrors });
+    }
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+    if (error.message === 'CHARGE_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Cobrança não encontrada' });
+    }
+    if (error.message === 'PAYMENT_EXCEEDS_CHARGE') {
+      return res.status(400).json({ success: false, message: 'O valor do pagamento não pode exceder o total da cobrança.' });
+    }
+    return res.status(500).json({ message: 'Erro ao registrar pagamento', error: error.message });
+  }
+};
+
+exports.updatePatient = async (req, res) => {
+  try {
+    const { patientId } = patientIdParamSchema.parse(req.params);
+    const payload = updatePatientSchema.parse(req.body);
+
+    const patient = await PatientService.findAccessiblePatient(patientId, req.userId, req.clinicaId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+
+    const updatedPatient = await PatientService.updatePatient(patientId, req.userId, req.clinicaId, payload);
+    return res.status(200).json({ success: true, message: 'Dados do paciente atualizados com sucesso', patient: updatedPatient });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dados inválidos.',
+        errors: error.flatten().fieldErrors
+      });
+    }
+
+    if (error.message === 'PATIENT_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'Paciente não encontrado' });
+    }
+
+    if (error?.code === 11000 || /duplicate key/i.test(error?.message || '')) {
+      return res.status(409).json({ success: false, message: 'Já existe um paciente cadastrado com esse CPF.' });
+    }
+
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: 'Dados inválidos para atualização do paciente.' });
+    }
+
+    return res.status(500).json({ message: 'Erro ao atualizar paciente', error: error.message });
   }
 };
 
