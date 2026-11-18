@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { billingCollectionName } = require('./stripe-mode');
 
 const processedWebhookEventSchema = new mongoose.Schema({
   eventId: { type: String, required: true, index: true, unique: true },
@@ -18,6 +19,10 @@ const processedWebhookEventSchema = new mongoose.Schema({
   eventCreatedAt: { type: Date, default: null }
 }, { timestamps: true });
 
-const ProcessedWebhookEvent = mongoose.model('ProcessedWebhookEvent', processedWebhookEventSchema, 'processed_webhook_events');
+const ProcessedWebhookEvent = mongoose.model(
+  'ProcessedWebhookEvent',
+  processedWebhookEventSchema,
+  billingCollectionName('processed_webhook_events')
+);
 
 module.exports = ProcessedWebhookEvent;

@@ -16,6 +16,8 @@ const origFindOneAndUpdate = Subscription.findOneAndUpdate;
 const origUserFindById = User.findById;
 const origCreateOrRetrieveCustomer = BillingService.createOrRetrieveCustomer;
 const origCreateCheckoutSession = BillingService.createCheckoutSession;
+const origFindBlockingStripeSubscription = BillingService.findBlockingStripeSubscription;
+const origFindOpenCheckoutSession = BillingService.findOpenCheckoutSession;
 
 // Helper to create mock req/res
 function makeReqRes(body, userId = 'user-1', clinicaId = null, role = 'administrador') {
@@ -39,58 +41,64 @@ function makeReqRes(body, userId = 'user-1', clinicaId = null, role = 'administr
   return { req, res };
 }
 
-test('two sequential checkouts for same owner -> second is rejected', async () => {
-  // in-memory store to simulate DB
-  const store = {};
+test('checkout recupera uma falha temporária, retoma a sessão aberta e substitui a sessão expirada', async (t) => {
+  let subscription = {
+    _id: 'doc-1',
+    ownerType: 'clinic',
+    ownerId: 'clinic-abc',
+    status: 'pending',
+    plan: 'clinic',
+    stripeCustomerId: 'cus_test'
+  };
+  let openSession;
+  const createCalls = [];
 
-  Subscription.findOne = async (query) => {
-    // simulate lookup by ownerType/ownerId and status
-    if (query && query.ownerType && query.ownerId) {
-      const key = `${query.ownerType}:${query.ownerId}`;
-      return store[key] || null;
-    }
-    return null;
+  t.after(() => {
+    Subscription.findOne = origFindOne;
+    Subscription.findOneAndUpdate = origFindOneAndUpdate;
+    User.findById = origUserFindById;
+    BillingService.createOrRetrieveCustomer = origCreateOrRetrieveCustomer;
+    BillingService.createCheckoutSession = origCreateCheckoutSession;
+    BillingService.findBlockingStripeSubscription = origFindBlockingStripeSubscription;
+    BillingService.findOpenCheckoutSession = origFindOpenCheckoutSession;
+  });
+
+  Subscription.findOne = async () => subscription;
+  Subscription.findOneAndUpdate = async (_filter, update) => {
+    subscription = { ...subscription, ...update.$set };
+    return subscription;
+  };
+  User.findById = async (id) => ({ _id: id, name: 'Teste', email: 'teste@example.test' });
+  BillingService.createOrRetrieveCustomer = async () => subscription.stripeCustomerId;
+  BillingService.findBlockingStripeSubscription = async () => null;
+  BillingService.findOpenCheckoutSession = async () => openSession;
+  BillingService.createCheckoutSession = async (params) => {
+    createCalls.push(params);
+    if (createCalls.length === 1) throw new Error('stripe temporarily unavailable');
+    openSession = { url: 'https://checkout.example.test/' + createCalls.length, metadata: { med1pePlan: 'clinic' } };
+    return openSession;
   };
 
-  Subscription.findOneAndUpdate = async (filter, update, opts) => {
-    const key = `${filter.ownerType}:${filter.ownerId}`;
-    if (!store[key]) {
-      // create new pending reservation
-      store[key] = {
-        _id: 'doc-1',
-        ownerType: filter.ownerType,
-        ownerId: filter.ownerId,
-        plan: update.$setOnInsert ? update.$setOnInsert.plan : 'clinic',
-        status: update.$setOnInsert ? update.$setOnInsert.status : 'pending',
-        stripeCustomerId: update.$setOnInsert ? update.$setOnInsert.stripeCustomerId : null
-      };
-      return store[key];
-    }
-    // if exists, return existing
-    return store[key];
+  const checkout = async (onError = (err) => { throw err; }) => {
+    const { req, res } = makeReqRes({ plan: 'clinic' }, 'user-1', 'clinic-abc');
+    await billingController.checkout(req, res, onError);
+    return res;
   };
 
-  User.findById = async (id) => ({ _id: id, name: 'Test', email: 't@test', clinicaId: 'clinic-abc', role: 'administrador' });
-  BillingService.createOrRetrieveCustomer = async () => 'cus_test';
-  BillingService.createCheckoutSession = async () => ({ url: 'https://stripe.checkout/session' });
+  await assert.rejects(checkout(), /stripe temporarily unavailable/);
+  const resumed = await checkout();
+  assert.equal(resumed.statusCode, 200);
+  assert.equal(resumed.payload.url, openSession.url);
+  assert.deepEqual(createCalls[1], createCalls[0]);
 
-  // First call (should create reservation and return session url)
-  const { req: req1, res: res1 } = makeReqRes({ plan: 'clinic' }, 'user-1', 'clinic-abc', 'administrador');
-  await billingController.checkout(req1, res1, (err) => { if (err) throw err; });
-  assert.equal(res1.statusCode, 200);
-  assert.equal(res1.payload.success, true);
-  assert.ok(res1.payload.url);
+  const reopened = await checkout();
+  assert.equal(reopened.payload.url, resumed.payload.url);
+  assert.equal(createCalls.length, 2);
 
-  // Second call (should detect reservation and return 409)
-  const { req: req2, res: res2 } = makeReqRes({ plan: 'clinic' }, 'user-1', 'clinic-abc', 'administrador');
-  await billingController.checkout(req2, res2, (err) => { if (err) throw err; });
-  assert.equal(res2.statusCode, 409);
-  assert.equal(res2.payload.code, 'SUBSCRIPTION_ALREADY_ACTIVE');
-
-  // cleanup
-  Subscription.findOne = origFindOne;
-  Subscription.findOneAndUpdate = origFindOneAndUpdate;
-  User.findById = origUserFindById;
-  BillingService.createOrRetrieveCustomer = origCreateOrRetrieveCustomer;
-  BillingService.createCheckoutSession = origCreateCheckoutSession;
+  openSession = null;
+  subscription.checkoutAttempt.expiresAt = new Date(0);
+  const refreshed = await checkout();
+  assert.equal(refreshed.statusCode, 200);
+  assert.notEqual(refreshed.payload.url, resumed.payload.url);
+  assert.notEqual(createCalls[2].attemptId, createCalls[1].attemptId);
 });
