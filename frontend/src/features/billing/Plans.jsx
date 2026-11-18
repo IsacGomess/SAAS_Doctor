@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createCheckout,
   getSubscription,
@@ -78,6 +78,15 @@ const PLAN_DEFS = {
   }
 };
 
+const BLOCKING_SUBSCRIPTION_STATUSES = [
+  'active',
+  'trialing',
+  'incomplete',
+  'past_due',
+  'unpaid',
+  'paused'
+];
+
 const STATUS_MAP = {
   active: {
     label: 'Ativo',
@@ -89,6 +98,10 @@ const STATUS_MAP = {
   },
   past_due: {
     label: 'Pagamento pendente',
+    className: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
+  },
+  pending: {
+    label: 'Aguardando pagamento',
     className: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'
   },
   canceled: {
@@ -144,7 +157,7 @@ export default function Plans() {
       const res = await createCheckout(plan);
 
       if (res?.url) {
-        window.location.href = res.url;
+        window.location.assign(res.url);
         return;
       }
 
@@ -169,7 +182,7 @@ export default function Plans() {
       const res = await openPortal();
 
       if (res?.url) {
-        window.location.href = res.url;
+        window.location.assign(res.url);
         return;
       }
 
@@ -396,7 +409,14 @@ export default function Plans() {
 
           {Object.entries(PLAN_DEFS).map(([key, plan]) => {
             const isCurrent =
-              subscription && subscription.plan === key;
+              subscription &&
+              subscription.plan === key &&
+              BLOCKING_SUBSCRIPTION_STATUSES.includes(subscription.status);
+
+            const isCanceledReactivation =
+              subscription &&
+              subscription.plan === key &&
+              subscription.status === 'canceled';
 
             return (
               <div
@@ -468,7 +488,7 @@ export default function Plans() {
                         Assinatura mensal
                       </small>
 
-                      {(trialEligible && !subscription) && (
+                      {trialEligible && (
                         <div className="mt-2 text-primary fw-semibold small">
                           <i className="bi bi-sparkles me-1" />
                           7 dias grátis
@@ -558,16 +578,18 @@ export default function Plans() {
                               </>
                             ) : (
                               <>
-                                {plan.cta}
+                                {isCanceledReactivation ? 'Assinar novamente' : plan.cta}
                                 <i className="bi bi-arrow-right ms-2" />
                               </>
                             )}
                           </button>
 
                           <small className="text-muted d-block text-center mt-2">
-                            {trialEligible && !subscription
+                            {trialEligible
                               ? '7 dias grátis. Após o período, a assinatura passa a ser cobrada mensalmente, salvo cancelamento antes do término.'
-                              : 'Você será direcionado para o checkout seguro.'}
+                              : isCanceledReactivation
+                                ? 'Sua assinatura anterior foi cancelada. Você pode contratar este plano novamente.'
+                                : 'Você será direcionado para o checkout seguro.'}
                           </small>
                         </>
                       )}

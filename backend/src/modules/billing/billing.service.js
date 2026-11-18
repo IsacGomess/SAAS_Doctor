@@ -1,3 +1,4 @@
+const { randomUUID } = require('node:crypto');
 const Subscription = require('./subscription.model');
 const ProcessedWebhookEvent = require('./processed-webhook-event.model');
 const User = require('../users/user.model');
@@ -11,6 +12,10 @@ const PROFESSIONAL_ROLES = ['medico', 'enfermeiro', 'fisioterapeuta', 'nutricion
 const INCLUDED_SEAT_LIMIT = 5;
 const EXTRA_PROFESSIONAL_PRICE_CENTS = 4990;
 const WEBHOOK_PROCESSING_LEASE_MS = 60_000;
+const SUBSCRIPTION_SYNC_ATTEMPTS = 5;
+const ENDED_SUBSCRIPTION_STATUSES = ['canceled', 'incomplete_expired'];
+const CHECKOUT_ALLOWED_STATUSES = ['pending', ...ENDED_SUBSCRIPTION_STATUSES];
+const CHECKOUT_WINDOW_MS = 60 * 60_000;
 
 class BillingService {
   constructor() {
@@ -90,6 +95,68 @@ class BillingService {
     return await Subscription.findOne({ ownerType, ownerId });
   }
 
+  isTrialEligible(subscription) {
+    return !subscription?.trialUsed && !subscription?.stripeSubscriptionId;
+  }
+
+  async reserveCheckout({ ownerType, ownerId, plan, priceId }) {
+    const owner = { ownerType, ownerId };
+    const existing = await Subscription.findOne(owner);
+    if (existing && !CHECKOUT_ALLOWED_STATUSES.includes(existing.status)) return null;
+
+    const now = new Date();
+    if (existing?.checkoutAttempt?.expiresAt > now) return existing;
+
+    // Keep the Stripe payload stable across retries of the same attempt.
+    const checkoutAttempt = {
+      id: randomUUID(),
+      plan,
+      priceId,
+      trialEligible: this.isTrialEligible(existing),
+      expiresAt: new Date(now.getTime() + CHECKOUT_WINDOW_MS)
+    };
+    try {
+      return await Subscription.findOneAndUpdate(
+        {
+          ...owner,
+          status: { $in: CHECKOUT_ALLOWED_STATUSES },
+          stripeSubscriptionId: existing?.stripeSubscriptionId ?? null,
+          $or: [{ checkoutAttempt: null }, { 'checkoutAttempt.expiresAt': { $lte: now } }]
+        },
+        { $set: { checkoutAttempt }, $setOnInsert: { ...owner, plan } },
+        { upsert: !existing, new: true, setDefaultsOnInsert: true }
+      );
+    } catch (error) {
+      if (error.code === 11000) return null;
+      throw error;
+    }
+  }
+
+  async findBlockingStripeSubscription(customerId) {
+    const stripe = this.getStripeClient();
+    for await (const subscription of stripe.subscriptions.list({ customer: customerId, status: 'all' })) {
+      if (!ENDED_SUBSCRIPTION_STATUSES.includes(subscription.status)) return subscription;
+    }
+    return null;
+  }
+
+  async findOpenCheckoutSession(customerId) {
+    const stripe = this.getStripeClient();
+    for await (const session of stripe.checkout.sessions.list({ customer: customerId, status: 'open' })) {
+      if (session.mode === 'subscription') return session;
+    }
+    return null;
+  }
+
+  async releaseExpiredCheckout(session) {
+    const { med1peOwnerType, med1peOwnerId, med1peCheckoutAttemptId } = session.metadata || {};
+    if (session.mode !== 'subscription' || !med1peOwnerType || !med1peOwnerId || !med1peCheckoutAttemptId) return;
+    await Subscription.updateOne(
+      { ownerType: med1peOwnerType, ownerId: med1peOwnerId, 'checkoutAttempt.id': med1peCheckoutAttemptId },
+      { $set: { checkoutAttempt: null } }
+    );
+  }
+
   async getCurrentStripeSubscriptionState(stripeSubscription) {
     if (!stripeSubscription || !stripeSubscription.id) {
       return stripeSubscription;
@@ -97,14 +164,10 @@ class BillingService {
 
     const stripe = this.getStripeClient();
     if (!stripe) {
-      return stripeSubscription;
+      throw new Error('Não foi possível confirmar o estado atual da assinatura na Stripe.');
     }
 
-    try {
-      return await stripe.subscriptions.retrieve(stripeSubscription.id, { expand: ['items.data.price'] });
-    } catch (error) {
-      return stripeSubscription;
-    }
+    return await stripe.subscriptions.retrieve(stripeSubscription.id, { expand: ['items.data.price'] });
   }
 
   async reserveWebhookEventForProcessing({ eventId, stripeSubscriptionId, ownerType, ownerId, eventCreatedAt }) {
@@ -226,40 +289,96 @@ class BillingService {
     const eventId = options.eventId || null;
     const eventCreatedAt = options.eventCreatedAt ? new Date(options.eventCreatedAt) : null;
 
-    let doc = await Subscription.findOne({ stripeSubscriptionId: stripeSubscription.id });
-    if (!doc && ownerType && ownerId) {
-      doc = await Subscription.findOne({ ownerType, ownerId });
-    }
+    let doc;
+    let eventClaimed = false;
+    let synchronized;
 
-    const effectiveStripeSubscription = await this.getCurrentStripeSubscriptionState(stripeSubscription);
+    try {
+      for (let attempt = 0; attempt < SUBSCRIPTION_SYNC_ATTEMPTS; attempt++) {
+        doc = await Subscription.findOne({ stripeSubscriptionId: stripeSubscription.id });
+        if (!doc && ownerType && ownerId) {
+          doc = await Subscription.findOne({ ownerType, ownerId });
+        }
+
+        if (eventId && Array.isArray(doc?.processedWebhookEventIds) && doc.processedWebhookEventIds.includes(eventId)) {
+          synchronized = doc;
+          break;
+        }
+
+        const current = await this.getCurrentStripeSubscriptionState(stripeSubscription);
+        const attemptId = current.metadata?.med1peCheckoutAttemptId;
+        const matchesCheckout = Boolean(attemptId && attemptId === doc?.checkoutAttempt?.id);
+        const isNewSubscription = doc?.stripeSubscriptionId !== current.id;
+        if (doc?.stripeSubscriptionId && isNewSubscription) {
+          if (!CHECKOUT_ALLOWED_STATUSES.includes(doc.status)) {
+            synchronized = doc;
+            break;
+          }
+          const previous = await this.getCurrentStripeSubscriptionState({ id: doc.stripeSubscriptionId });
+          // Older Checkout Sessions did not attach an attempt ID to the subscription.
+          const newerLegacySubscription = !attemptId && current.created > previous.created;
+          if (!ENDED_SUBSCRIPTION_STATUSES.includes(previous.status) || (!matchesCheckout && !newerLegacySubscription)) {
+            synchronized = doc;
+            break;
+          }
+        }
+
+        if (eventId && !eventClaimed) {
+          const state = await this.reserveWebhookEventForProcessing({
+            eventId,
+            stripeSubscriptionId: stripeSubscription.id,
+            ownerType: ownerType || doc?.ownerType || null,
+            ownerId: ownerId || doc?.ownerId || null,
+            eventCreatedAt
+          });
+          if (state.shouldProcess === false || (state.duplicate && state.status === 'processed')) return doc;
+          eventClaimed = true;
+        }
+
+        synchronized = await this.saveStripeSubscription(doc, current, {
+          metadata,
+          eventId,
+          eventCreatedAt,
+          clearCheckout: matchesCheckout || (isNewSubscription && !attemptId)
+        });
+        // A concurrent event may have just claimed the subscription. Refresh both snapshots and retry.
+        if (synchronized !== undefined) break;
+      }
+
+      if (synchronized === undefined) {
+        throw new Error('Conflitos de atualização impediram sincronizar a assinatura.');
+      }
+
+      if (eventClaimed) {
+        await this.markWebhookEventAsCompleted({
+          eventId,
+          stripeSubscriptionId: stripeSubscription.id,
+          ownerType: ownerType || synchronized?.ownerType || null,
+          ownerId: ownerId || synchronized?.ownerId || null
+        });
+      }
+      return synchronized;
+    } catch (error) {
+      if (eventClaimed) {
+        await this.markWebhookEventAsCompleted({
+          eventId,
+          stripeSubscriptionId: stripeSubscription.id,
+          ownerType: ownerType || doc?.ownerType || null,
+          ownerId: ownerId || doc?.ownerId || null,
+          errorMessage: error.message
+        });
+      }
+      throw error;
+    }
+  }
+
+  async saveStripeSubscription(doc, effectiveStripeSubscription, { metadata, eventId, eventCreatedAt, clearCheckout }) {
     const processedEventIds = Array.isArray(doc?.processedWebhookEventIds) ? doc.processedWebhookEventIds : [];
     const isEventOlderThanCurrent = Boolean(
       eventCreatedAt &&
       doc?.lastWebhookProcessedAt &&
       eventCreatedAt.getTime() < new Date(doc.lastWebhookProcessedAt).getTime()
     );
-
-    if (eventId && processedEventIds.includes(eventId)) {
-      return doc;
-    }
-
-    if (eventId) {
-      const eventState = await this.reserveWebhookEventForProcessing({
-        eventId,
-        stripeSubscriptionId: stripeSubscription.id,
-        ownerType: ownerType || doc?.ownerType || null,
-        ownerId: ownerId || doc?.ownerId || null,
-        eventCreatedAt: eventCreatedAt || null
-      });
-
-      if (eventState.duplicate && eventState.status === 'processed') {
-        return doc;
-      }
-
-      if (eventState.shouldProcess === false) {
-        return doc;
-      }
-    }
     const nextProcessedEventIds = eventId
       ? [...new Set([...(processedEventIds || []), eventId])].slice(-50)
       : (processedEventIds || []);
@@ -276,8 +395,8 @@ class BillingService {
     const plan = planFromPrice || metadata.med1pePlan || doc?.plan || null;
     const plannedStatus = effectiveStripeSubscription.status || 'pending';
 
-    const effectiveOwnerType = ownerType || doc?.ownerType || null;
-    const effectiveOwnerId = ownerId || doc?.ownerId || null;
+    const effectiveOwnerType = metadata.med1peOwnerType || doc?.ownerType || null;
+    const effectiveOwnerId = metadata.med1peOwnerId || doc?.ownerId || null;
     const existingTrialUsed = Boolean(doc?.trialUsed);
     const existingTrialStartedAt = doc?.trialStartedAt || null;
     const existingTrialEndsAt = doc?.trialEndsAt || null;
@@ -315,6 +434,10 @@ class BillingService {
       trialEndsAt: existingTrialEndsAt
     };
 
+    if (clearCheckout) {
+      update.checkoutAttempt = null;
+    }
+
     if (plannedStatus === 'trialing') {
       update.trialUsed = true;
       update.trialStartedAt = effectiveStripeSubscription.trial_start
@@ -338,40 +461,25 @@ class BillingService {
       });
     }
 
+    if (doc) {
+      const saved = await Subscription.findOneAndUpdate(
+        { _id: doc._id, stripeSubscriptionId: doc.stripeSubscriptionId ?? null, updatedAt: doc.updatedAt ?? null },
+        { $set: update },
+        { new: true }
+      );
+      return saved ?? undefined;
+    }
+
+    if (!effectiveOwnerType || !effectiveOwnerId) return null;
+
     try {
-      let savedSubscription;
-      if (doc) {
-        savedSubscription = await Subscription.findByIdAndUpdate(doc._id, { $set: update }, { new: true });
-      } else if (effectiveOwnerType && effectiveOwnerId) {
-        savedSubscription = await Subscription.findOneAndUpdate(
-          { ownerType: effectiveOwnerType, ownerId: effectiveOwnerId },
-          { $set: update },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-      } else {
-        savedSubscription = doc;
-      }
-
-      if (eventId) {
-        await this.markWebhookEventAsCompleted({
-          eventId,
-          stripeSubscriptionId: effectiveStripeSubscription.id,
-          ownerType: effectiveOwnerType,
-          ownerId: effectiveOwnerId
-        });
-      }
-
-      return savedSubscription || doc; 
+      return await Subscription.findOneAndUpdate(
+        { ownerType: effectiveOwnerType, ownerId: effectiveOwnerId, stripeSubscriptionId: null },
+        { $set: update },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
     } catch (error) {
-      if (eventId) {
-        await this.markWebhookEventAsCompleted({
-          eventId,
-          stripeSubscriptionId: stripeSubscription.id,
-          ownerType: ownerType || doc?.ownerType || null,
-          ownerId: ownerId || doc?.ownerId || null,
-          errorMessage: error.message
-        });
-      }
+      if (error.code === 11000) return undefined;
       throw error;
     }
   }
@@ -489,7 +597,7 @@ class BillingService {
     };
   }
 
-  async createOrRetrieveCustomer(ownerType, ownerId, user) {
+  async createOrRetrieveCustomer(ownerType, ownerId, user, checkoutAttemptId) {
     const stripe = this.getStripeClient();
     if (!stripe) {
       throw new Error('Configuração de cobrança pendente: STRIPE_SECRET_KEY ausente.');
@@ -505,18 +613,18 @@ class BillingService {
         med1peOwnerType: ownerType,
         med1peOwnerId: String(ownerId)
       }
-    });
+    }, { idempotencyKey: `med1pe:customer:${ownerType}:${ownerId}` });
 
-    await Subscription.findOneAndUpdate(
-      { ownerType, ownerId },
-      { $set: { stripeCustomerId: customer.id } },
-      { upsert: true, new: true }
+    const result = await Subscription.updateOne(
+      { ownerType, ownerId, 'checkoutAttempt.id': checkoutAttemptId },
+      { $set: { stripeCustomerId: customer.id } }
     );
+    if (!result.matchedCount) throw new Error('A tentativa de checkout mudou durante a criação do cliente.');
 
     return customer.id;
   }
 
-  async createCheckoutSession({ plan, ownerType, ownerId, priceId, customerId, trialEligible = false }) {
+  async createCheckoutSession({ plan, ownerType, ownerId, priceId, customerId, trialEligible = false, attemptId, expiresAt }) {
     const stripe = this.getStripeClient();
     if (!stripe) {
       throw new Error('Configuração de cobrança pendente: STRIPE_SECRET_KEY ausente.');
@@ -525,13 +633,13 @@ class BillingService {
     const success_url = `${process.env.FRONTEND_URL}/dashboard?billing=success`;
     const cancel_url = `${process.env.FRONTEND_URL}/dashboard?billing=cancel`;
 
-    const subscriptionData = {
-      metadata: {
-        med1peOwnerType: ownerType,
-        med1peOwnerId: String(ownerId),
-        med1pePlan: plan
-      }
+    const metadata = {
+      med1peOwnerType: ownerType,
+      med1peOwnerId: String(ownerId),
+      med1pePlan: plan,
+      med1peCheckoutAttemptId: attemptId
     };
+    const subscriptionData = { metadata };
 
     if (trialEligible) {
       subscriptionData.trial_period_days = 7;
@@ -542,15 +650,12 @@ class BillingService {
       payment_method_types: ['card'],
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: {
-        med1peOwnerType: ownerType,
-        med1peOwnerId: String(ownerId),
-        med1pePlan: plan
-      },
+      metadata,
       subscription_data: subscriptionData,
       success_url,
-      cancel_url
-    });
+      cancel_url,
+      expires_at: Math.floor(expiresAt.getTime() / 1000)
+    }, { idempotencyKey: `med1pe:checkout:${attemptId}` });
 
     return session;
   }

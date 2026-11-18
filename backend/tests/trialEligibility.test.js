@@ -54,7 +54,8 @@ test('owner new to trial gets trial_period_days=7 on checkout', async () => {
     if (ownerType === 'user' && ownerId === 'user-1') return null;
     return null;
   };
-  Subscription.findOneAndUpdate = async () => ({
+  Subscription.findOneAndUpdate = async (_filter, update) => ({
+    checkoutAttempt: update.$set.checkoutAttempt,
     ownerType: 'user',
     ownerId: 'user-1',
     plan: 'professional',
@@ -93,7 +94,8 @@ test('owner with trialUsed true does not receive trial_period_days on checkout',
       trialUsed: true
     };
   };
-  Subscription.findOneAndUpdate = async () => ({
+  Subscription.findOneAndUpdate = async (_filter, update) => ({
+    checkoutAttempt: update.$set.checkoutAttempt,
     ownerType: 'user',
     ownerId: 'user-1',
     plan: 'professional',

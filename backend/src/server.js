@@ -46,6 +46,8 @@ const appointmentRoutes = require('./modules/appointments/appointment.routes.js'
 const reportsRoutes = require('./modules/reports/report.routes.js');
 const billingRoutes = require('./modules/billing/billing.routes.js');
 const billingController = require('./modules/billing/billing.controller.js');
+const Subscription = require('./modules/billing/subscription.model.js');
+const ProcessedWebhookEvent = require('./modules/billing/processed-webhook-event.model.js');
 const PORT = process.env.PORT || 3000;
 
 mongoose.connection.on('error', (err) => console.error('Erro de conexão com o MongoDB:', err)); // Adiciona um listener para erros de conexão do MongoDB
@@ -53,6 +55,7 @@ mongoose.connection.on('error', (err) => console.error('Erro de conexão com o M
 async function startServer() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
+    await Promise.all([Subscription.init(), ProcessedWebhookEvent.init()]);
 
     console.log('Conectado ao MongoDB');
 
