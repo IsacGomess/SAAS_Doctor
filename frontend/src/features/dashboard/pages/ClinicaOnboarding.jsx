@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import api from '../../../services/api';
 import { addMembro, getMembros, deleteMembro } from '../../clinic/hooks/membroService';
@@ -7,6 +8,8 @@ import './ClinicaOnboarding.css';
 
 function ClinicaOnboarding() {
   const auth = useAuth();
+  const navigate = useNavigate();
+  const fromClinicCheckout = useLocation().state?.fromClinicCheckout === true;
   const [clinica, setClinica] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
@@ -22,6 +25,8 @@ function ClinicaOnboarding() {
     phone: '',
     email: ''
   });
+  const [showClinicPlanConfirmation, setShowClinicPlanConfirmation] = useState(false);
+  const [isSavingClinic, setIsSavingClinic] = useState(false);
 
   const [formMembro, setFormMembro] = useState({
     name: '',
@@ -82,7 +87,8 @@ function ClinicaOnboarding() {
       try {
         const response = await getSubscription();
         if (!mounted) return;
-        setSubscriptionPlan(response?.subscription?.plan || null);
+        const openClinicForm = fromClinicCheckout && response?.clinicCheckoutBlocked === false;
+        setSubscriptionPlan(openClinicForm ? null : response?.subscription?.plan || null);
       } catch (err) {
         if (!mounted) return;
         setSubscriptionPlan(null);
@@ -96,9 +102,11 @@ function ClinicaOnboarding() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [fromClinicCheckout]);
 
   useEffect(() => {
+    if (subscriptionPlan !== 'professional') return;
+
     let mounted = true;
 
     const loadProfessionalData = async () => {
@@ -124,7 +132,7 @@ function ClinicaOnboarding() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [subscriptionPlan]);
 
   // Carregar clínica
   useEffect(() => {
@@ -194,13 +202,20 @@ function ClinicaOnboarding() {
     setFormMembro((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
+    setShowClinicPlanConfirmation(true);
+  };
+
+  const handleSaveClinic = async (event) => {
+    if (isSavingClinic || !event.currentTarget.form.reportValidity()) return;
+
     setMessage(null);
     setError(null);
+    setIsSavingClinic(true);
 
     try {
-      const response = await api.post('/api/clinics', form);
+      const response = await api.post('/api/clinics', { ...form, email: form.email.trim() || undefined });
 
       if (response.data?.accessToken) {
         // Salva o novo token com clinicaId
@@ -224,18 +239,13 @@ function ClinicaOnboarding() {
         if (response.data.user?.registroProf) localStorage.setItem('registroProf', response.data.user.registroProf);
       }
 
-      setClinica(response.data.clinica);
-      setMessage('Clínica criada com sucesso!');
-      
-      // Aguarda um pouco para garantir sincronização do localStorage
-      setTimeout(() => {
-        auth.refreshUserInfo();
-        loadMembros();
-      }, 100);
+      navigate('/planos');
     } catch (err) {
       const details = err.response?.data?.message || 'Erro ao criar clínica';
       console.error('Erro ao criar clínica:', err);
       setError(details);
+    } finally {
+      setIsSavingClinic(false);
     }
   };
 
@@ -564,7 +574,7 @@ function ClinicaOnboarding() {
               />
             </label>
             <label>
-              CNPJ
+              CNPJ (opcional)
               <input
                 type="text"
                 name="cnpj"
@@ -603,9 +613,36 @@ function ClinicaOnboarding() {
                 className="onboarding-input"
               />
             </label>
-            <button type="submit" className="onboarding-primary-btn">
-              Criar Clínica
-            </button>
+            {showClinicPlanConfirmation ? (
+              <div className="alert alert-warning mb-0">
+                <p className="mb-3" role="alert">
+                  Ao cadastrar a clínica, esta conta poderá contratar o plano Clínica.
+                  Para contratar o plano Profissional Individual, será preciso usar outro e-mail.
+                </p>
+                <div className="d-flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => navigate('/planos')}
+                    disabled={isSavingClinic}
+                  >
+                    Plano Profissional
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleSaveClinic}
+                    disabled={isSavingClinic}
+                  >
+                    {isSavingClinic ? 'Salvando...' : 'Confirmar plano Clínica'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="submit" className="onboarding-primary-btn">
+                Criar Clínica
+              </button>
+            )}
           </form>
         </div>
       )}

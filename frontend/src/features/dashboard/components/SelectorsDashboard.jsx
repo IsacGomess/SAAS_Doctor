@@ -2,14 +2,13 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import { getSubscription } from "../../../services/billing";
 
-export function SelectorsDashboard() {
+export function SelectorsDashboard({ confirmingCheckout = false }) {
     const role = localStorage.getItem('role') || '';
-    const [resolvedRole, setResolvedRole] = (typeof window !== 'undefined') ? [role, null] : [role, null];
     const [subscriptionPlan, setSubscriptionPlan] = React.useState(null);
 
     // If role is not in localStorage, attempt to fetch current user
     React.useEffect(() => {
-        if (!role) {
+        if (!role && !confirmingCheckout) {
             (async () => {
                 try {
                     const res = await fetch('/api/users/me', { credentials: 'include' });
@@ -21,14 +20,16 @@ export function SelectorsDashboard() {
                             window.location.reload();
                         }
                     }
-                } catch (err) {
+                } catch {
                     // ignore
                 }
             })();
         }
-    }, []);
+    }, [role, confirmingCheckout]);
 
     React.useEffect(() => {
+        if (confirmingCheckout) return;
+
         let active = true;
 
         const loadPlan = async () => {
@@ -47,7 +48,7 @@ export function SelectorsDashboard() {
         return () => {
             active = false;
         };
-    }, []);
+    }, [confirmingCheckout]);
 
     const clinicMenuLabel = subscriptionPlan === 'professional'
         ? 'Meus dados'

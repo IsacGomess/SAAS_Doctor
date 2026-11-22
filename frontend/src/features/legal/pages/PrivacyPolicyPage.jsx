@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import CompanyIdentification from '../components/CompanyIdentification';
+import { company, supportLink } from '../company';
 
 const PrivacyPolicyPage = () => {
   return (
@@ -36,14 +38,13 @@ const PrivacyPolicyPage = () => {
         </div>
 
         <p style={{ color: '#4B5563', fontSize: '14px', marginBottom: '24px' }}>
-          <strong>Última atualização:</strong> 14 de setembro de 2026
+          <strong>Última atualização:</strong> 21 de novembro de 2026
         </p>
 
         <div style={{ lineHeight: 1.8, fontSize: '15px' }}>
           <p>
-            Esta Política explica como o <strong>Med1PE</strong>, disponibilizado por <strong>[RAZÃO SOCIAL/NOME EMPRESARIAL]</strong>,
-            inscrita no CNPJ sob nº <strong>[CNPJ]</strong>, trata dados pessoais durante a utilização de sua plataforma de gestão de
-            clínicas e atendimentos em saúde.
+            Esta Política explica como o <strong>Med1PE</strong>, disponibilizado pela <strong>{company.name}</strong>,
+            trata dados pessoais durante a utilização da plataforma de gestão de clínicas e atendimentos em saúde.
           </p>
 
           <p>
@@ -320,8 +321,8 @@ const PrivacyPolicyPage = () => {
             <li>pagamentos.</li>
           </ul>
           <p>
-            Atualmente, a infraestrutura poderá envolver prestadores como <strong>Cloudflare, Render, MongoDB Atlas e Resend</strong>,
-            de acordo com a configuração utilizada pelo serviço.
+            A Stripe processa os pagamentos das assinaturas. A infraestrutura poderá envolver prestadores como{' '}
+            <strong>Cloudflare, Render, MongoDB Atlas e Resend</strong>, de acordo com a configuração utilizada pelo serviço.
           </p>
           <p>Essa relação poderá ser alterada conforme evolução da arquitetura.</p>
 
@@ -354,10 +355,6 @@ const PrivacyPolicyPage = () => {
           <p>
             Informações adicionais sobre transferências internacionais poderão ser disponibilizadas mediante solicitação,
             observados os segredos comercial e industrial.
-          </p>
-          <p>
-            <strong>ANTES DA PUBLICAÇÃO:</strong> confirmar as regiões efetivamente utilizadas no MongoDB Atlas, Render,
-            Cloudflare e demais fornecedores e documentar os países ou regiões relevantes.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>13. Retenção</h2>
@@ -421,7 +418,7 @@ const PrivacyPolicyPage = () => {
           <p>Os direitos não são absolutos e poderão ser limitados quando houver obrigação legal de manutenção das informações.</p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>16. Direito do paciente ao prontuário</h2>
-          <p>O paciente possui direitos específicos relativos às informações referentes à sua saúde.</p>
+          <p>O paciente pode acessar o prontuário, obter cópia sem ônus e solicitar a retificação de seus dados clínicos.</p>
           <p>
             Pedidos de acesso, cópia ou retificação referentes ao conteúdo clínico deverão normalmente ser direcionados à
             clínica ou ao profissional que atua como Controlador dessas informações.
@@ -432,7 +429,7 @@ const PrivacyPolicyPage = () => {
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>17. Como exercer direitos</h2>
           <p>Quando o Med1PE atuar como Controlador, solicitações poderão ser enviadas para:</p>
-          <p><strong>[E-MAIL DE PRIVACIDADE / ENCARREGADO]</strong></p>
+          <p><a href={supportLink}>{company.email}</a></p>
           <p>
             Poderemos solicitar informações necessárias à confirmação da identidade do solicitante antes de disponibilizar dados
             pessoais.
@@ -477,11 +474,6 @@ const PrivacyPolicyPage = () => {
             <li>mecanismos de recuperação e continuidade quando implementados.</li>
           </ul>
           <p>Nenhum sistema pode garantir segurança absoluta.</p>
-          <p>
-            <strong>ANTES DA PUBLICAÇÃO:</strong> documentar formalmente e confirmar quais mecanismos de backup, criptografia em
-            repouso, retenção de logs e recuperação de desastre estão efetivamente ativos. Não publicar uma afirmação técnica
-            que ainda não corresponda à infraestrutura real.
-          </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>20. Incidentes de segurança</h2>
           <p>Caso ocorra incidente envolvendo dados pessoais, serão adotadas medidas para:</p>
@@ -536,12 +528,11 @@ const PrivacyPolicyPage = () => {
             O Usuário deverá avaliar as condições do serviço externo antes de utilizá-lo para compartilhar informações clínicas.
           </p>
 
-          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>25. Encarregado pelo tratamento de dados</h2>
-          <p>O canal de comunicação relacionado à proteção de dados é:</p>
-          <p><strong>Encarregado/DPO:</strong> [NOME OU IDENTIFICAÇÃO DO ENCARREGADO]</p>
-          <p><strong>E-mail:</strong> [E-MAIL DE PRIVACIDADE]</p>
+          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>25. Canal de privacidade e encarregado</h2>
+          <p>O canal para assuntos de proteção de dados é <a href={supportLink}>{company.email}</a>.</p>
           <p>
-            Quando aplicável regulamentação diferenciada relativa à indicação do encarregado, serão observadas as regras da ANPD.
+            Quando a indicação de encarregado for obrigatória, sua identidade e suas informações de contato serão divulgadas
+            de acordo com a regulamentação da ANPD.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>26. Autoridade Nacional de Proteção de Dados</h2>
@@ -568,12 +559,8 @@ const PrivacyPolicyPage = () => {
           <p>Alterações relevantes poderão ser comunicadas aos usuários por meios adicionais.</p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>28. Contato</h2>
-          <p>Para assuntos relacionados à privacidade e proteção de dados:</p>
-          <p><strong>[RAZÃO SOCIAL / NOME EMPRESARIAL]</strong></p>
-          <p><strong>CNPJ:</strong> [CNPJ]</p>
-          <p><strong>Endereço:</strong> [ENDEREÇO]</p>
-          <p><strong>E-mail de privacidade:</strong> [E-MAIL]</p>
-          <p><strong>E-mail de suporte:</strong> [E-MAIL]</p>
+          <p>O mesmo canal recebe solicitações de privacidade e atendimento sobre o Med1PE.</p>
+          <CompanyIdentification />
 
           <p style={{ marginTop: '24px', fontWeight: 700 }}>
             Esta Política busca assegurar transparência sobre o tratamento de dados realizado no contexto do Med1PE e deverá ser

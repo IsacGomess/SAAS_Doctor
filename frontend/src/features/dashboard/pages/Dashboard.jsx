@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom"; 
+import { Outlet, useSearchParams } from "react-router-dom";
 import { NavBar } from "../components/NavBar";
 import { SelectorsDashboard } from "../components/SelectorsDashboard";
+import CheckoutConfirmation from "../../billing/CheckoutConfirmation";
 import "./Dashboard.css";
 
 function Dashboard() {
+    const [searchParams] = useSearchParams();
+    const confirmingCheckout = searchParams.get('billing') === 'success';
     const [username, setUserName] = useState(localStorage.getItem("userName") || ""); 
     const [registroProf, setRegistroProf] = useState(localStorage.getItem("registroProf") || "");
     const [clinicName, setClinicName] = useState(localStorage.getItem("clinicName") || "");
@@ -30,15 +33,15 @@ function Dashboard() {
 
     return (
         <div className="med1pe-dashboard-shell">
-            <NavBar userName={username} registroProf={registroProf} clinicName={clinicName} />
+            <NavBar userName={username} registroProf={registroProf} clinicName={clinicName} confirmingCheckout={confirmingCheckout} />
 
             <div className="med1pe-dashboard-layout">
                 <aside className="dashboard-sidebar" aria-label="Menu lateral do dashboard">
-                    <SelectorsDashboard />
+                    <SelectorsDashboard confirmingCheckout={confirmingCheckout} />
                 </aside>
 
                 <main className="dashboard-main">
-                    <Outlet />
+                    {confirmingCheckout ? <CheckoutConfirmation /> : <Outlet />}
                 </main>
             </div>
         </div>

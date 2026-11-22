@@ -2,6 +2,8 @@ const { randomUUID } = require('node:crypto');
 const Subscription = require('./subscription.model');
 const ProcessedWebhookEvent = require('./processed-webhook-event.model');
 const User = require('../users/user.model');
+const { stripeLiveMode } = require('./stripe-mode');
+const { ACTIVE_SUBSCRIPTION_STATUSES } = require('../../middlewares/requireActiveSubscription');
 
 const PLAN_PRICES = () => ({
   professional: process.env.STRIPE_PRICE_PROFESSIONAL,
@@ -146,6 +148,49 @@ class BillingService {
       if (session.mode === 'subscription') return session;
     }
     return null;
+  }
+
+  async reconcileCompletedCheckout(local) {
+    const attempt = local?.checkoutAttempt;
+    if (!attempt || !local.stripeCustomerId || !CHECKOUT_ALLOWED_STATUSES.includes(local.status)) {
+      return local;
+    }
+
+    const stripe = this.getStripeClient();
+    if (!stripe) throw new Error('Não foi possível verificar a tentativa de Checkout na Stripe.');
+
+    const matchesOwnerAndAttempt = (metadata) =>
+      metadata?.med1peOwnerType === local.ownerType &&
+      metadata.med1peOwnerId === String(local.ownerId) &&
+      metadata.med1pePlan === attempt.plan &&
+      metadata.med1peCheckoutAttemptId === attempt.id;
+
+    const sessions = await stripe.checkout.sessions.list({
+      customer: local.stripeCustomerId,
+      status: 'complete',
+      created: { gte: Math.floor((attempt.expiresAt.getTime() - CHECKOUT_WINDOW_MS) / 1000) }
+    });
+    const session = sessions.data.find((candidate) =>
+      candidate.livemode === stripeLiveMode &&
+      candidate.customer === local.stripeCustomerId &&
+      candidate.mode === 'subscription' &&
+      candidate.status === 'complete' &&
+      ['paid', 'no_payment_required'].includes(candidate.payment_status) &&
+      typeof candidate.subscription === 'string' &&
+      matchesOwnerAndAttempt(candidate.metadata)
+    );
+    if (!session) return local;
+
+    const subscription = await this.getCurrentStripeSubscriptionState({ id: session.subscription });
+    if (subscription.livemode !== stripeLiveMode ||
+        subscription.customer !== local.stripeCustomerId ||
+        !matchesOwnerAndAttempt(subscription.metadata) ||
+        !ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription.status) ||
+        !subscription.items?.data?.some((item) => item.price?.id === attempt.priceId)) {
+      return local;
+    }
+
+    return await this.syncStripeSubscription(subscription, { checkoutAttemptId: attempt.id });
   }
 
   async releaseExpiredCheckout(session) {
@@ -309,6 +354,11 @@ class BillingService {
         const attemptId = current.metadata?.med1peCheckoutAttemptId;
         const matchesCheckout = Boolean(attemptId && attemptId === doc?.checkoutAttempt?.id);
         const isNewSubscription = doc?.stripeSubscriptionId !== current.id;
+        if (options.checkoutAttemptId && isNewSubscription &&
+            (!matchesCheckout || attemptId !== options.checkoutAttemptId)) {
+          synchronized = doc;
+          break;
+        }
         if (doc?.stripeSubscriptionId && isNewSubscription) {
           if (!CHECKOUT_ALLOWED_STATUSES.includes(doc.status)) {
             synchronized = doc;

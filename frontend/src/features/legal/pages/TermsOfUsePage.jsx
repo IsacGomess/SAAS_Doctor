@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import CompanyIdentification from '../components/CompanyIdentification';
+import { company, supportLink, withdrawalLink } from '../company';
 
 const TermsOfUsePage = () => {
   return (
@@ -36,20 +38,18 @@ const TermsOfUsePage = () => {
         </div>
 
         <p style={{ color: '#4B5563', fontSize: '14px', marginBottom: '24px' }}>
-          <strong>Última atualização:</strong> 14 de setembro de 2026
+          <strong>Última atualização:</strong> 21 de novembro de 2026
         </p>
 
         <div style={{ lineHeight: 1.8, fontSize: '15px' }}>
           <p>
-            Estes Termos de Uso regulam o acesso e a utilização da plataforma <strong>Med1PE</strong>, disponibilizada por
-            <strong> [RAZÃO SOCIAL/NOME EMPRESARIAL]</strong>, inscrita no CNPJ sob nº <strong>[CNPJ]</strong>, com sede em
-            <strong> [ENDEREÇO COMPLETO]</strong>, doravante denominada <strong>Med1PE</strong>, <strong>Plataforma</strong> ou
-            <strong>Prestadora</strong>.
+            Estes Termos de Uso regulam o acesso e a utilização da plataforma <strong>Med1PE</strong>.
           </p>
+          <CompanyIdentification />
 
-          <p>
-            Ao criar uma conta, acessar ou utilizar a Plataforma, o Usuário declara ter lido, compreendido e aceitado estes
-            Termos de Uso e a Política de Privacidade do Med1PE.
+          <p className="mt-3">
+            Ao criar uma conta ou utilizar a Plataforma, o Usuário aceita estes Termos de Uso. Consulte a{' '}
+            <Link to="/politica-de-privacidade">Política de Privacidade</Link> para saber como os dados pessoais são tratados.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>1. Sobre o Med1PE</h2>
@@ -88,16 +88,20 @@ const TermsOfUsePage = () => {
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>4. Cadastro e informações fornecidas</h2>
           <p>
-            O Usuário compromete-se a fornecer informações verdadeiras, completas e atualizadas. O Med1PE poderá solicitar
-            informações como nome, e-mail, telefone, profissão, número de registro profissional, informações relativas à
-            clínica e credenciais de autenticação.
+            O Usuário compromete-se a fornecer informações verdadeiras e atualizadas. Para criar a conta, o Med1PE solicita
+            nome, e-mail e senha. Para configurar uma clínica, é necessário informar o nome do estabelecimento.
+            O CNPJ é opcional nessa etapa.
+          </p>
+          <p>
+            Dados como CPF, CNPJ e endereço fiscal poderão ser solicitados quando necessários à contratação ou à emissão de
+            nota fiscal. A identificação profissional poderá ser solicitada para a emissão de documentos clínicos.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>5. Segurança da conta</h2>
           <p>
             O Usuário é responsável por manter suas credenciais confidenciais. Caso identifique acesso suspeito, perda de
             senha ou possível comprometimento de sua conta, deverá comunicar o Med1PE imediatamente pelo canal
-            <strong> [E-MAIL DE SEGURANÇA/SUPORTE]</strong>.
+            {' '}<a href={supportLink}>{company.email}</a>.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>6. Pacientes e dados de saúde</h2>
@@ -115,8 +119,8 @@ const TermsOfUsePage = () => {
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>7. Responsabilidade da clínica e do profissional</h2>
           <p>
             O profissional ou estabelecimento de saúde deverá garantir que possui fundamento jurídico adequado para inserir e
-            tratar dados dos pacientes na Plataforma. São de responsabilidade do Usuário, entre outros, a obtenção de
-            consentimentos, a qualidade das informações inseridas e o cumprimento da legislação profissional e sanitária.
+            tratar dados dos pacientes na Plataforma. O Usuário deve obter consentimento quando ele for a base legal aplicável,
+            zelar pela qualidade dos registros e cumprir as normas profissionais e sanitárias.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>8. Prontuários e registros clínicos</h2>
@@ -127,6 +131,11 @@ const TermsOfUsePage = () => {
           <p>
             O Med1PE poderá implementar mecanismos de preservação da integridade e rastreabilidade dos registros, como
             identificação do profissional, data e horário, histórico de ações, registros de auditoria e versionamento.
+          </p>
+          <p>
+            O paciente pode solicitar acesso, cópia sem ônus ou retificação do prontuário à clínica ou ao profissional
+            responsável. Em caso de encerramento da assinatura, o responsável deve preservar os prontuários pelo prazo legal
+            aplicável e pode solicitar suporte para obter os registros que precisa conservar.
           </p>
 
           <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>9. Uso proibido</h2>
@@ -143,17 +152,32 @@ const TermsOfUsePage = () => {
             exclusiva e intransferível para uso da Plataforma conforme estes Termos.
           </p>
 
-          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>11. Suspensão e encerramento</h2>
+          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>11. Assinatura e cobrança</h2>
+          <p>
+            Antes de contratar, consulte na página de Planos os recursos incluídos, o valor mensal e os custos adicionais
+            aplicáveis. A assinatura é renovada mensalmente até o cancelamento.
+          </p>
+          <p>
+            Quando disponível, o período gratuito dura sete dias a partir do início da assinatura. A cobrança mensal começa ao
+            fim desse período, salvo se a assinatura for cancelada antes.
+          </p>
+          <p>
+            Para cancelar, acesse <strong>Gerenciar assinatura</strong> na página de Planos ou solicite atendimento por{' '}
+            <a href={supportLink}>e-mail</a>. Quando o Código de Defesa do Consumidor se aplicar, o consumidor pode desistir
+            da contratação online em até sete dias, contados da assinatura ou do recebimento do serviço, conforme o art. 49.
+            A página de Planos também oferece um canal para <a href={withdrawalLink}>solicitar o arrependimento</a>.
+          </p>
+
+          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>12. Suspensão e encerramento</h2>
           <p>
             O Med1PE poderá suspender ou encerrar contas em situações como violação destes Termos, fraude, uso ilegal,
             risco à segurança, tentativa de acesso não autorizado, ordem judicial ou administrativa ou inadimplemento.
           </p>
 
-          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>12. Legislação e contato</h2>
+          <h2 style={{ fontSize: '22px', margin: '28px 0 12px', color: '#111827' }}>13. Legislação e contato</h2>
           <p>
-            Estes Termos são regidos pelas leis da República Federativa do Brasil. Dúvidas poderão ser enviadas para:
-            <strong> Med1PE / [RAZÃO SOCIAL]</strong>, CNPJ: <strong>[CNPJ]</strong>, e-mail:
-            <strong> [E-MAIL DE SUPORTE]</strong>, endereço: <strong>[ENDEREÇO]</strong>.
+            Estes Termos são regidos pelas leis da República Federativa do Brasil. Para dúvidas sobre a Plataforma ou a
+            contratação, escreva para <a href={supportLink}>{company.email}</a>.
           </p>
 
           <p style={{ marginTop: '24px', fontWeight: 700 }}>

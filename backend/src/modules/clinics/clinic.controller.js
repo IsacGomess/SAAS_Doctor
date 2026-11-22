@@ -17,7 +17,7 @@ exports.createClinica = async (req, res) => {
         const user = await UserService.associateClinicAndMakeAdmin(req.userId,clinica._id);
 
         const accessToken = jwt.sign(
-            { userId: user._id, name: user.name, clinicaId: user.clinicaId || null },
+            { userId: user._id, name: user.name, clinicaId: user.clinicaId || null, tokenVersion: user.tokenVersion },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
