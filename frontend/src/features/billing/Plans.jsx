@@ -8,6 +8,7 @@ import {
   getSubscription,
   openPortal
 } from '../../services/billing';
+import './Plans.css';
 
 const PLAN_DEFS = {
   professional: {
@@ -39,6 +40,18 @@ const PLAN_DEFS = {
       {
         title: 'Ambiente individual',
         desc: 'Uma estrutura pensada para o profissional que atende por conta própria.'
+      },
+      {
+        title: 'Assinatura digital',
+        desc: 'Assine documentos digitalmente durante o atendimento.'
+      },
+      {
+        title: 'Recomendações terapêuticas',
+        desc: 'Gere documentos digitais com recomendações terapêuticas para enviar ao paciente pelo WhatsApp.'
+      },
+      {
+        title: 'Controle de débitos e pagamentos',
+        desc: 'Registre e acompanhe digitalmente os débitos e pagamentos de seus pacientes.'
       }
     ],
     cta: 'Escolher Profissional',
@@ -98,7 +111,7 @@ const STATUS_MAP = {
   },
   trialing: {
     label: 'Período gratuito',
-    className: 'bg-info-subtle text-info-emphasis border border-info-subtle'
+    className: 'bg-primary-subtle text-primary-emphasis border border-primary-subtle'
   },
   past_due: {
     label: 'Pagamento pendente',
@@ -270,7 +283,7 @@ export default function Plans() {
   if (loading) {
     return (
       <div
-        className="container d-flex flex-column justify-content-center align-items-center"
+        className="med1pe-plans container d-flex flex-column justify-content-center align-items-center"
         style={{ minHeight: '70vh' }}
       >
         <div
@@ -288,7 +301,7 @@ export default function Plans() {
   }
 
   return (
-    <div className="bg-body-tertiary min-vh-100">
+    <div className="med1pe-plans bg-body-tertiary min-vh-100">
       <div className="container py-5">
 
         <div className="mb-4">
@@ -373,7 +386,7 @@ export default function Plans() {
                       </div>
 
                       {subscription.status === 'trialing' && (
-                        <div className="text-info d-block mt-1">
+                        <div className="text-primary d-block mt-1">
                           <small className="d-block fw-semibold">
                             <i className="bi bi-sparkles me-1" />
                             Período gratuito
@@ -445,28 +458,13 @@ export default function Plans() {
         )}
 
         {/* ERRO */}
-        {error && (
+        {error && error.code !== 'CLINIC_REQUIRED' && (
           <div
             className="alert alert-danger border-0 shadow-sm d-flex align-items-center"
             role="alert"
           >
             <i className="bi bi-exclamation-circle-fill fs-5 me-3" />
-            <div>
-              <div>{error.message}</div>
-              {error.code === 'CLINIC_REQUIRED' && (
-                <div className="mt-2">
-                  <p className="small mb-2">Preencha os dados do estabelecimento na área Minha Clínica.</p>
-                  <Link
-                    className="btn btn-primary btn-sm"
-                    to="/dashboard/clinica"
-                    state={{ fromClinicCheckout: true }}
-                  >
-                    Cadastrar minha clínica
-                    <i className="bi bi-arrow-right ms-2" aria-hidden="true" />
-                  </Link>
-                </div>
-              )}
-            </div>
+            <div>{error.message}</div>
           </div>
         )}
 
@@ -476,6 +474,7 @@ export default function Plans() {
           {Object.entries(PLAN_DEFS).map(([key, plan]) => {
             const isClinicCheckoutBlocked = key === 'clinic' && clinicCheckoutBlocked;
             const isProfessionalCheckoutBlocked = key === 'professional' && professionalCheckoutBlocked;
+            const clinicRequired = key === 'clinic' && error?.code === 'CLINIC_REQUIRED';
             const isCurrent =
               subscription &&
               subscription.plan === key &&
@@ -709,13 +708,31 @@ export default function Plans() {
                             )}
                           </button>
 
-                          <small className="text-muted d-block text-center mt-2">
-                            {trialEligible
-                              ? '7 dias grátis. Após o período, a assinatura passa a ser cobrada mensalmente, salvo cancelamento antes do término.'
-                              : isCanceledReactivation
-                                ? 'Sua assinatura anterior foi cancelada. Você pode contratar este plano novamente.'
-                                : 'Você será direcionado para o checkout seguro.'}
-                          </small>
+                          {clinicRequired ? (
+                            <div className="alert alert-danger border-0 d-flex align-items-start mt-3 mb-0" role="alert">
+                              <i className="bi bi-exclamation-circle-fill fs-5 me-3" aria-hidden="true" />
+                              <div>
+                                <div>{error.message}</div>
+                                <p className="small mt-2 mb-2">Preencha os dados do estabelecimento na área Minha Clínica.</p>
+                                <Link
+                                  className="btn btn-primary btn-sm"
+                                  to="/dashboard/clinica"
+                                  state={{ fromClinicCheckout: true }}
+                                >
+                                  Cadastrar minha clínica
+                                  <i className="bi bi-arrow-right ms-2" aria-hidden="true" />
+                                </Link>
+                              </div>
+                            </div>
+                          ) : (
+                            <small className="text-muted d-block text-center mt-2">
+                              {trialEligible
+                                ? '7 dias grátis. Após o período, a assinatura passa a ser cobrada mensalmente, salvo cancelamento antes do término.'
+                                : isCanceledReactivation
+                                  ? 'Sua assinatura anterior foi cancelada. Você pode contratar este plano novamente.'
+                                  : 'Você será direcionado para o checkout seguro.'}
+                            </small>
+                          )}
                         </>
                       )}
 
