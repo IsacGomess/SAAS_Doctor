@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import { getSubscription } from "../../../services/billing";
 
-export function NavBar({userName, registroProf, clinicName}) {
-    const { logout } = useAuth();
+export function NavBar({userName, registroProf, clinicName, confirmingCheckout = false}) {
+    const { logout } = useAuth({ loadProfile: !confirmingCheckout });
     const [subscriptionStatus, setSubscriptionStatus] = useState(null);
 
     const formatClinicName = (name) => {
@@ -19,6 +19,8 @@ export function NavBar({userName, registroProf, clinicName}) {
     };
 
     useEffect(() => {
+        if (confirmingCheckout) return;
+
         let active = true;
 
         const loadSubscriptionStatus = async () => {
@@ -26,7 +28,7 @@ export function NavBar({userName, registroProf, clinicName}) {
                 const res = await getSubscription();
                 if (!active) return;
                 setSubscriptionStatus(res?.subscription?.status || null);
-            } catch (error) {
+            } catch {
                 if (!active) return;
                 setSubscriptionStatus(null);
             }
@@ -37,7 +39,7 @@ export function NavBar({userName, registroProf, clinicName}) {
         return () => {
             active = false;
         };
-    }, []);
+    }, [confirmingCheckout]);
 
     const renderSubscriptionIndicator = () => {
         if (!subscriptionStatus) return null;

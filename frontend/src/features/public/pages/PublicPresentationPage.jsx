@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import CompanyIdentification from '../../legal/components/CompanyIdentification';
 import './PublicPresentationPage.css';
 
 const scheduleData = [
@@ -300,6 +301,15 @@ export default function PublicPresentationPage() {
           </div>
         </motion.section>
       </main>
+      <footer className="med1pe-sections mt-4 pt-3 border-top small">
+        <div className="d-flex flex-wrap justify-content-between gap-3">
+          <CompanyIdentification />
+          <nav className="d-flex flex-wrap gap-3" aria-label="Informações legais">
+            <a href="/termos-de-uso">Termos de Uso</a>
+            <a href="/politica-de-privacidade">Política de Privacidade</a>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }

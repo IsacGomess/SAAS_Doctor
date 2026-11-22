@@ -7,6 +7,7 @@ const limiter = require('../../middlewares/rate-limit.js');
 
 // Protected checkout - create Stripe Checkout Session
 routes.post('/checkout', limiter.generalLimiter, authMiddleware.authenticateToken, csrfMiddleware.validateOrigin, csrfMiddleware.doubleCsrfProtection, billingController.checkout);
+routes.post('/checkout/confirm', limiter.generalLimiter, authMiddleware.authenticateToken, csrfMiddleware.validateOrigin, csrfMiddleware.doubleCsrfProtection, billingController.confirmCheckout);
 
 // Get current subscription for user/clinic context
 routes.get('/subscription', limiter.generalLimiter, authMiddleware.authenticateToken, billingController.getSubscription);

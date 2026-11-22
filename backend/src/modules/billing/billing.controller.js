@@ -2,10 +2,17 @@ const { ZodError, z } = require('zod');
 const BillingService = require('./billing.service');
 const { stripeLiveMode } = require('./stripe-mode');
 const User = require('../users/user.model');
+const { ACTIVE_SUBSCRIPTION_STATUSES } = require('../../middlewares/requireActiveSubscription');
 
 const checkoutSchema = z.object({
   plan: z.enum(['professional', 'clinic'])
 });
+
+const CLINIC_CHECKOUT_BLOCKING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid', 'paused'];
+
+function blocksClinicCheckout(subscription) {
+  return subscription?.plan === 'professional' && CLINIC_CHECKOUT_BLOCKING_STATUSES.includes(subscription.status);
+}
 
 exports.checkout = async (req, res, next) => {
   try {
@@ -14,12 +21,31 @@ exports.checkout = async (req, res, next) => {
     // determine owner
     let ownerType, ownerId;
     if (plan === 'professional') {
+      if (req.clinicaId) {
+        return res.status(409).json({
+          success: false,
+          code: 'PROFESSIONAL_CHECKOUT_BLOCKED',
+          message: 'Esta conta está vinculada a uma clínica. Use outro e-mail para contratar o plano Profissional Individual.'
+        });
+      }
       ownerType = 'user';
       ownerId = req.userId;
     } else {
       // clinic plan
+      const personalSubscription = await BillingService.getSubscriptionByOwner('user', req.userId);
+      if (blocksClinicCheckout(personalSubscription)) {
+        return res.status(409).json({
+          success: false,
+          code: 'CLINIC_CHECKOUT_BLOCKED',
+          message: 'Sua conta já tem o plano Profissional. Para contratar o plano Clínica, cadastre-se com outro e-mail ou fale com o suporte.'
+        });
+      }
       if (!req.clinicaId) {
-        return res.status(400).json({ success: false, message: 'Crie sua clínica antes de contratar o plano Clínica.' });
+        return res.status(400).json({
+          success: false,
+          code: 'CLINIC_REQUIRED',
+          message: 'Crie sua clínica antes de contratar o plano Clínica.'
+        });
       }
       if (!req.user || req.user.role !== 'administrador') {
         return res.status(403).json({ success: false, message: 'Apenas administrador pode contratar plano da clínica.' });
@@ -106,18 +132,42 @@ exports.checkout = async (req, res, next) => {
   }
 };
 
+exports.confirmCheckout = async (req, res, next) => {
+  try {
+    const ownerType = req.clinicaId ? 'clinic' : 'user';
+    const ownerId = req.clinicaId || req.userId;
+    const local = await BillingService.getSubscriptionByOwner(ownerType, ownerId);
+    const subscription = await BillingService.reconcileCompletedCheckout(local);
+
+    return res.json({ success: true, hasActiveSubscription: ACTIVE_SUBSCRIPTION_STATUSES.includes(subscription?.status) });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 exports.getSubscription = async (req, res, next) => {
   try {
     // determine owner context: prefer clinic context when available
-    let ownerType = req.clinicaId ? 'clinic' : 'user';
-    let ownerId = req.clinicaId || req.userId;
+    const ownerType = req.clinicaId ? 'clinic' : 'user';
+    const ownerId = req.clinicaId || req.userId;
 
-    const sub = await BillingService.getSubscriptionByOwner(ownerType, ownerId);
+    const [sub, personalSubscription] = await Promise.all([
+      BillingService.getSubscriptionByOwner(ownerType, ownerId),
+      req.clinicaId ? BillingService.getSubscriptionByOwner('user', req.userId) : null
+    ]);
+    const clinicCheckoutBlocked = blocksClinicCheckout(req.clinicaId ? personalSubscription : sub);
+    const professionalCheckoutBlocked = Boolean(req.clinicaId);
+    const hasActiveSubscription = [sub, personalSubscription].some((candidate) =>
+      ACTIVE_SUBSCRIPTION_STATUSES.includes(candidate?.status)
+    );
     if (!sub) {
       return res.status(200).json({
         success: true,
         subscription: null,
-        trialEligible: true
+        trialEligible: true,
+        clinicCheckoutBlocked,
+        professionalCheckoutBlocked,
+        hasActiveSubscription
       });
     }
 
@@ -132,7 +182,7 @@ exports.getSubscription = async (req, res, next) => {
       trialUsed: sub.trialUsed,
       trialStartedAt: sub.trialStartedAt,
       trialEndsAt: sub.trialEndsAt
-    }, trialEligible });
+    }, trialEligible, clinicCheckoutBlocked, professionalCheckoutBlocked, hasActiveSubscription });
   } catch (error) {
     return next(error);
   }

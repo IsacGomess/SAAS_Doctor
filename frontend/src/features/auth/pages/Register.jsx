@@ -2,14 +2,17 @@ import { useState } from "react";
 import api from "../../../services/api";
 import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import avatar from "../../../images/login-image.webp"; // Importa a imagem do avatar
+import AuthSuccessNotice from "../components/AuthSuccessNotice";
 
 function Register() {
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
     const [name,setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     // registroProf removed from public registration; can be added later in clinic area
     const navigate = useNavigate(); // Inicializa o hook useNavigate
+    const submitDisabled = loading || success;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,8 +24,7 @@ function Register() {
             // 🔒 Como o backend não envia token no registro, removemos o bloco "if(response.data.token)" antigo daqui.
             localStorage.removeItem('token'); // Garante que não há lixo eletrônico de logins antigos
 
-            alert("Médico registrado com sucesso!!");
-            navigate("/login"); 
+            setSuccess(true);
         } catch (error) {
             const mensagem = error.response?.data?.message || "Erro no servidor";
             console.error("Erro completo:", error.response?.data); 
@@ -45,6 +47,9 @@ function Register() {
     fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
     boxSizing: 'border-box'
   }}>
+    {success && (
+      <AuthSuccessNotice message="Profissional Cadastrado com Sucesso" destination="/login" />
+    )}
     <div style={{
       width: '100%',
       display: 'flex',
@@ -290,7 +295,7 @@ function Register() {
             <div style={{ display: 'block', marginBottom: '25px' }}>
               <button 
                       type="submit"
-                      disabled={loading}
+                      disabled={submitDisabled}
                       style={{
                         backgroundColor: '#1E6B65',
                         color: '#FFFFFF',
@@ -301,8 +306,8 @@ function Register() {
                         fontWeight: '700',
                         fontSize: '15px',
                         letterSpacing: '0.5px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        opacity: loading ? 0.7 : 1
+                        cursor: submitDisabled ? 'not-allowed' : 'pointer',
+                        opacity: submitDisabled ? 0.7 : 1
                       }}
                       >
                       {loading ? 'CADASTRANDO...' : 'FINALIZAR CADASTRO'}

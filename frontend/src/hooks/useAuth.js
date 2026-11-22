@@ -5,7 +5,7 @@ import api, { loadCsrfToken, clearCsrfToken } from '../services/api';
  * Hook personalizado para gerenciar estado de autenticação
  * Centraliza acesso às informações do usuário logado usando Cookies e LocalStorage cosmético
  */
-export const useAuth = () => {
+export const useAuth = ({ loadProfile = true } = {}) => {
     // 💡 Buscamos o ID do usuário de forma cosmética se necessário, ou podemos usar o ID da clínica
     const [userId, setUserId] = useState(null); 
     const [userName, setUserName] = useState(null);
@@ -16,6 +16,8 @@ export const useAuth = () => {
 
     // Inicializa o estado de autenticação ao montar o componente
     useEffect(() => {
+        if (!loadProfile) return;
+
         const initializeAuth = async () => {
             try {
                 // Tenta validar sessão no servidor usando cookie (credentials: include)
@@ -34,7 +36,7 @@ export const useAuth = () => {
                                 const clinicJson = await clinicResponse.json();
                                 clinicName = clinicJson?.clinica?.name || clinicName;
                             }
-                        } catch (err) {
+                        } catch {
                             console.warn('[AUTH] falha ao buscar nome da clínica para a navbar');
                         }
                     }
@@ -56,14 +58,14 @@ export const useAuth = () => {
                     // Após confirmar sessão válida, restaura CSRF em memória
                     try {
                         await loadCsrfToken();
-                    } catch (err) {
+                    } catch {
                         console.warn('[CSRF] falha ao restaurar token na inicialização');
                     }
 
                     setIsLoading(false);
                     return;
                 }
-            } catch (error) {
+            } catch {
                 // Falha ao contatar servidor, faremos fallback para storage
             }
 
@@ -92,7 +94,7 @@ export const useAuth = () => {
         };
 
         initializeAuth();
-    }, []);
+    }, [loadProfile]);
 
     // Função para definir a área da clínica
     const setDoctorClinicArea = useCallback((area) => {
@@ -103,7 +105,7 @@ export const useAuth = () => {
     }, []);
 
     // Função de logout (Avisa o backend para limpar os cookies)
-    const logout = useCallback(async () => {
+    const logout = useCallback(async (redirectTo = '/') => {
         try {
             await api.post('/api/users/logout');
             // Limpa CSRF em memória no cliente
@@ -114,24 +116,23 @@ export const useAuth = () => {
             }
         } catch (error) {
             console.error('Erro ao limpar cookies no servidor durante o logout:', error);
-        } finally {
-            // Limpa o lixo eletrônico do localStorage
-            localStorage.removeItem('token');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('clinicArea');
-            localStorage.removeItem('clinicaId');
-            localStorage.removeItem('clinicName');
-            localStorage.removeItem('registroProf');
-
-            // Reseta estados do React
-            setUserId(null);
-            setUserName(null);
-            setClinicArea(null);
-            setClinicaId(null);
-            setIsAuthenticated(false);
-
-            window.location.href = '/';
+            if (redirectTo !== '/') throw error;
         }
+
+        localStorage.removeItem('token');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('clinicArea');
+        localStorage.removeItem('clinicaId');
+        localStorage.removeItem('clinicName');
+        localStorage.removeItem('registroProf');
+
+        setUserId(null);
+        setUserName(null);
+        setClinicArea(null);
+        setClinicaId(null);
+        setIsAuthenticated(false);
+
+        window.location.href = redirectTo;
     }, []);
 
     // Função para atualizar informações do usuário de forma reativa
@@ -155,7 +156,7 @@ export const useAuth = () => {
                             const clinicJson = await clinicResponse.json();
                             clinicName = clinicJson?.clinica?.name || clinicName;
                         }
-                    } catch (err) {
+                    } catch {
                         console.warn('[AUTH] falha ao atualizar nome da clínica para a navbar');
                     }
                 }
@@ -183,7 +184,7 @@ export const useAuth = () => {
                 setUserId(u._id || null);
                 return;
             }
-        } catch (err) {
+        } catch {
             // fallback para leitura do localStorage
         }
 

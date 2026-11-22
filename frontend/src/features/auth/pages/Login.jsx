@@ -3,12 +3,15 @@ import { useState } from "react";
 import api, { loadCsrfToken } from "../../../services/api";
 import { Link, useNavigate } from "react-router-dom"; // Importa o hook useNavigate
 import avatar from "../../../images/login-image.webp"; // Importa a imagem do avatar
+import AuthSuccessNotice from "../components/AuthSuccessNotice";
 
 function Login() {
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate(); // Inicializa o hook useNavigate
+  const submitDisabled = loading || success;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,8 +68,7 @@ function Login() {
               console.warn('[CSRF] não foi possível carregar o token após login');
             }
 
-            alert("Sucesso, Bem vindo !!");
-            navigate("/dashboard"); // 🚀 Redireciona o usuário para dentro do sistema
+            setSuccess(true);
         } else {
             alert("Erro na estrutura de resposta do servidor.");
         }
@@ -80,6 +82,9 @@ function Login() {
 };
     return (
           <div className="login-page-wrapper">
+            {success && (
+              <AuthSuccessNotice message="Sucesso, Bem vindo !!" destination="/dashboard" />
+            )}
             <div
                 style={{
                 width: '100%',
@@ -278,7 +283,7 @@ Comece a organizar sua clínica ou seus atendimentos particulares com o Med1.
                     <div style={{ display: 'block', marginBottom: '25px' }}>
                       <button 
                       type="submit"
-                      disabled={loading}
+                      disabled={submitDisabled}
                       style={{
                         backgroundColor: '#1E6B65',
                         color: '#FFFFFF',
@@ -289,8 +294,8 @@ Comece a organizar sua clínica ou seus atendimentos particulares com o Med1.
                         fontWeight: '700',
                         fontSize: '15px',
                         letterSpacing: '0.5px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        opacity: loading ? 0.7 : 1
+                        cursor: submitDisabled ? 'not-allowed' : 'pointer',
+                        opacity: submitDisabled ? 0.7 : 1
                       }}
                       >
                       {loading ? 'ENTRANDO...' : 'ENTRAR '}

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import CompanyIdentification from '../legal/components/CompanyIdentification';
+import { supportLink, withdrawalLink } from '../legal/company';
 import {
   createCheckout,
   getSubscription,
   openPortal
 } from '../../services/billing';
+import './Plans.css';
 
 const PLAN_DEFS = {
   professional: {
@@ -35,6 +40,18 @@ const PLAN_DEFS = {
       {
         title: 'Ambiente individual',
         desc: 'Uma estrutura pensada para o profissional que atende por conta própria.'
+      },
+      {
+        title: 'Assinatura digital',
+        desc: 'Assine documentos digitalmente durante o atendimento.'
+      },
+      {
+        title: 'Recomendações terapêuticas',
+        desc: 'Gere documentos digitais com recomendações terapêuticas para enviar ao paciente pelo WhatsApp.'
+      },
+      {
+        title: 'Controle de débitos e pagamentos',
+        desc: 'Registre e acompanhe digitalmente os débitos e pagamentos de seus pacientes.'
       }
     ],
     cta: 'Escolher Profissional',
@@ -94,7 +111,7 @@ const STATUS_MAP = {
   },
   trialing: {
     label: 'Período gratuito',
-    className: 'bg-info-subtle text-info-emphasis border border-info-subtle'
+    className: 'bg-primary-subtle text-primary-emphasis border border-primary-subtle'
   },
   past_due: {
     label: 'Pagamento pendente',
@@ -111,9 +128,13 @@ const STATUS_MAP = {
 };
 
 export default function Plans() {
+  const { logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState(null);
   const [trialEligible, setTrialEligible] = useState(false);
+  const [clinicCheckoutBlocked, setClinicCheckoutBlocked] = useState(false);
+  const [professionalCheckoutBlocked, setProfessionalCheckoutBlocked] = useState(false);
+  const [showClinicOptions, setShowClinicOptions] = useState(false);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
@@ -128,14 +149,16 @@ export default function Plans() {
 
         setSubscription(res?.subscription || null);
         setTrialEligible(Boolean(res?.trialEligible));
+        setClinicCheckoutBlocked(Boolean(res?.clinicCheckoutBlocked));
+        setProfessionalCheckoutBlocked(Boolean(res?.professionalCheckoutBlocked));
       } catch (err) {
         console.error('Erro ao carregar assinatura', err);
 
         if (mounted) {
-          setError(
-            err?.response?.data?.message ||
-            'Não foi possível carregar suas informações de assinatura.'
-          );
+          setError({
+            message: err?.response?.data?.message ||
+              'Não foi possível carregar suas informações de assinatura.'
+          });
         }
       } finally {
         if (mounted) setLoading(false);
@@ -161,14 +184,37 @@ export default function Plans() {
         return;
       }
 
-      setError(res?.message || 'Não foi possível iniciar o pagamento.');
+      setError({ message: res?.message || 'Não foi possível iniciar o pagamento.' });
     } catch (err) {
+      const failure = err?.response?.data;
+      if (failure?.code === 'CLINIC_CHECKOUT_BLOCKED') {
+        setClinicCheckoutBlocked(true);
+        setShowClinicOptions(true);
+        return;
+      }
+      if (failure?.code === 'PROFESSIONAL_CHECKOUT_BLOCKED') {
+        setProfessionalCheckoutBlocked(true);
+        return;
+      }
       console.error(err);
 
-      setError(
-        err?.response?.data?.message ||
-        'Não foi possível iniciar o pagamento.'
-      );
+      setError({
+        message: failure?.message || 'Não foi possível iniciar o pagamento.',
+        code: failure?.code
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRegister = async () => {
+    setError(null);
+    setActionLoading('register');
+
+    try {
+      await logout('/register');
+    } catch {
+      setError({ message: 'Não foi possível encerrar a sessão. Tente novamente para abrir o cadastro.' });
     } finally {
       setActionLoading(null);
     }
@@ -186,17 +232,13 @@ export default function Plans() {
         return;
       }
 
-      setError(
-        res?.message ||
-        'Não foi possível abrir o gerenciamento da assinatura.'
-      );
+      setError({ message: res?.message || 'Não foi possível abrir o gerenciamento da assinatura.' });
     } catch (err) {
       console.error(err);
 
-      setError(
-        err?.response?.data?.message ||
-        'Não foi possível abrir o gerenciamento da assinatura.'
-      );
+      setError({
+        message: err?.response?.data?.message || 'Não foi possível abrir o gerenciamento da assinatura.'
+      });
     } finally {
       setActionLoading(null);
     }
@@ -241,7 +283,7 @@ export default function Plans() {
   if (loading) {
     return (
       <div
-        className="container d-flex flex-column justify-content-center align-items-center"
+        className="med1pe-plans container d-flex flex-column justify-content-center align-items-center"
         style={{ minHeight: '70vh' }}
       >
         <div
@@ -259,7 +301,7 @@ export default function Plans() {
   }
 
   return (
-    <div className="bg-body-tertiary min-vh-100">
+    <div className="med1pe-plans bg-body-tertiary min-vh-100">
       <div className="container py-5">
 
         <div className="mb-4">
@@ -294,6 +336,26 @@ export default function Plans() {
           </p>
         </div>
 
+        <section className="card border-0 shadow-sm mb-4" aria-labelledby="subscription-terms">
+          <div className="card-body p-4 d-flex flex-wrap justify-content-between gap-3">
+            <div>
+              <h2 id="subscription-terms" className="h6 fw-bold">Condições da assinatura</h2>
+              <p className="small mb-2">
+                Cobrança mensal com renovação automática. Para cancelar, use Gerenciar assinatura ou{' '}
+                <a href={supportLink}>fale com o suporte</a>.
+              </p>
+              <div className="small d-flex flex-wrap gap-3">
+                <Link to="/termos-de-uso" target="_blank" rel="noopener">Termos de Uso</Link>
+                <Link to="/politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</Link>
+                <a href={withdrawalLink}>Solicitar arrependimento</a>
+              </div>
+            </div>
+            <div className="small">
+              <CompanyIdentification />
+            </div>
+          </div>
+        </section>
+
         {/* PLANO ATUAL */}
         {subscription && (
           <div className="card border-0 shadow-sm mb-4">
@@ -324,7 +386,7 @@ export default function Plans() {
                       </div>
 
                       {subscription.status === 'trialing' && (
-                        <div className="text-info d-block mt-1">
+                        <div className="text-primary d-block mt-1">
                           <small className="d-block fw-semibold">
                             <i className="bi bi-sparkles me-1" />
                             Período gratuito
@@ -368,25 +430,27 @@ export default function Plans() {
                   </div>
                 </div>
 
-                <div className="col-md-auto">
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={handlePortal}
-                    disabled={actionLoading === 'portal'}
-                  >
-                    {actionLoading === 'portal' ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" />
-                        Abrindo...
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-gear me-2" />
-                        Gerenciar assinatura
-                      </>
-                    )}
-                  </button>
-                </div>
+                {subscription.status !== 'pending' && (
+                  <div className="col-md-auto">
+                    <button
+                      className="btn btn-outline-primary"
+                      onClick={handlePortal}
+                      disabled={actionLoading === 'portal'}
+                    >
+                      {actionLoading === 'portal' ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" />
+                          Abrindo...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-gear me-2" />
+                          Gerenciar assinatura
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
 
               </div>
             </div>
@@ -394,13 +458,13 @@ export default function Plans() {
         )}
 
         {/* ERRO */}
-        {error && (
+        {error && error.code !== 'CLINIC_REQUIRED' && (
           <div
             className="alert alert-danger border-0 shadow-sm d-flex align-items-center"
             role="alert"
           >
             <i className="bi bi-exclamation-circle-fill fs-5 me-3" />
-            <div>{error}</div>
+            <div>{error.message}</div>
           </div>
         )}
 
@@ -408,6 +472,9 @@ export default function Plans() {
         <div className="row g-4 justify-content-center">
 
           {Object.entries(PLAN_DEFS).map(([key, plan]) => {
+            const isClinicCheckoutBlocked = key === 'clinic' && clinicCheckoutBlocked;
+            const isProfessionalCheckoutBlocked = key === 'professional' && professionalCheckoutBlocked;
+            const clinicRequired = key === 'clinic' && error?.code === 'CLINIC_REQUIRED';
             const isCurrent =
               subscription &&
               subscription.plan === key &&
@@ -488,6 +555,12 @@ export default function Plans() {
                         Assinatura mensal
                       </small>
 
+                      {key === 'clinic' && (
+                        <small className="text-muted d-block mt-1">
+                          Até 5 profissionais ativos incluídos. Cada profissional adicional custa R$ 49,90 por mês.
+                        </small>
+                      )}
+
                       {trialEligible && (
                         <div className="mt-2 text-primary fw-semibold small">
                           <i className="bi bi-sparkles me-1" />
@@ -557,6 +630,57 @@ export default function Plans() {
                             Esta assinatura já está vinculada à sua conta.
                           </small>
                         </>
+                      ) : isProfessionalCheckoutBlocked ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary w-100 py-3 fw-semibold"
+                            aria-describedby="professional-checkout-blocked"
+                            disabled
+                          >
+                            <i className="bi bi-lock me-2" aria-hidden="true" />
+                            {plan.cta}
+                          </button>
+                          <small id="professional-checkout-blocked" className="text-muted d-block text-center mt-2">
+                            Esta conta está vinculada a uma clínica. Use outro e-mail para contratar o plano Profissional Individual.
+                          </small>
+                        </>
+                      ) : isClinicCheckoutBlocked ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary w-100 py-3 fw-semibold"
+                            aria-expanded={showClinicOptions}
+                            aria-controls="clinic-checkout-options"
+                            onClick={() => setShowClinicOptions((show) => !show)}
+                          >
+                            <i className="bi bi-lock me-2" aria-hidden="true" />
+                            Escolher Clínica
+                          </button>
+
+                          <div
+                            id="clinic-checkout-options"
+                            className="alert alert-warning mt-3 mb-0"
+                            hidden={!showClinicOptions}
+                          >
+                            <p className="mb-3">
+                              Você já tem o plano Profissional. Para contratar o plano Clínica,
+                              crie uma nova conta com outro e-mail ou entre em contato com o suporte.
+                            </p>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={handleRegister}
+                              disabled={Boolean(actionLoading)}
+                            >
+                              {actionLoading === 'register' ? 'Encerrando sessão...' : 'Sair e criar nova conta'}
+                              <i className="bi bi-arrow-right ms-2" aria-hidden="true" />
+                            </button>
+                            <a className="d-block mt-2" href="mailto:atriatec.contato@gmail.com">
+                              atriatec.contato@gmail.com
+                            </a>
+                          </div>
+                        </>
                       ) : (
                         <>
                           <button
@@ -584,13 +708,31 @@ export default function Plans() {
                             )}
                           </button>
 
-                          <small className="text-muted d-block text-center mt-2">
-                            {trialEligible
-                              ? '7 dias grátis. Após o período, a assinatura passa a ser cobrada mensalmente, salvo cancelamento antes do término.'
-                              : isCanceledReactivation
-                                ? 'Sua assinatura anterior foi cancelada. Você pode contratar este plano novamente.'
-                                : 'Você será direcionado para o checkout seguro.'}
-                          </small>
+                          {clinicRequired ? (
+                            <div className="alert alert-danger border-0 d-flex align-items-start mt-3 mb-0" role="alert">
+                              <i className="bi bi-exclamation-circle-fill fs-5 me-3" aria-hidden="true" />
+                              <div>
+                                <div>{error.message}</div>
+                                <p className="small mt-2 mb-2">Preencha os dados do estabelecimento na área Minha Clínica.</p>
+                                <Link
+                                  className="btn btn-primary btn-sm"
+                                  to="/dashboard/clinica"
+                                  state={{ fromClinicCheckout: true }}
+                                >
+                                  Cadastrar minha clínica
+                                  <i className="bi bi-arrow-right ms-2" aria-hidden="true" />
+                                </Link>
+                              </div>
+                            </div>
+                          ) : (
+                            <small className="text-muted d-block text-center mt-2">
+                              {trialEligible
+                                ? '7 dias grátis. Após o período, a assinatura passa a ser cobrada mensalmente, salvo cancelamento antes do término.'
+                                : isCanceledReactivation
+                                  ? 'Sua assinatura anterior foi cancelada. Você pode contratar este plano novamente.'
+                                  : 'Você será direcionado para o checkout seguro.'}
+                            </small>
+                          )}
                         </>
                       )}
 
